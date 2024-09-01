@@ -2,10 +2,16 @@ package ecommerce.auth_service.service;
 
 import ecommerce.auth_service.domain.User;
 import ecommerce.auth_service.dto.UserDTO;
+import ecommerce.auth_service.dto.UserRegisterDTO;
 import ecommerce.auth_service.mapper.UserMapper;
 import ecommerce.auth_service.repository.RoleRepository;
 import ecommerce.auth_service.repository.UserRepository;
 import ecommerce.auth_service.security.JwtTokenProvider;
+import ecommerce.auth_service.utils.Validator;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -43,30 +49,66 @@ public class AuthService {
     //     });
     // }
 
-    public Mono<ResponseEntity<UserDTO>> createUser(User user) {
+    public Mono<ResponseEntity<String>> createUser(User user) {
         return userRepository.save(user)
             .flatMap(savedUser -> {
-                String jwtToken = jwtTokenProvider.createToken(UserMapper.toUserDTO(savedUser));
-                String refreshToken = jwtTokenProvider.createRefreshToken(UserMapper.toUserDTO(savedUser));
-                
+                UserDTO userDTO = UserMapper.toUserDTO(savedUser);
+                String jwtToken = jwtTokenProvider.createToken(userDTO);
+                String refreshToken = jwtTokenProvider.createRefreshToken(userDTO);
+
                 savedUser.setRefreshToken(passwordEncoder.encode(refreshToken));
                 return userRepository.save(savedUser)
                     .map(updatedUser -> {
                         HttpHeaders headers = new HttpHeaders();
-                        headers.add("Authorization", "Bearer " + jwtToken);
+                        headers.setBearerAuth(jwtToken);
                         headers.add("Refresh-Token", refreshToken);
 
                         return ResponseEntity.status(201)
                             .headers(headers)
-                            .body(UserMapper.toUserDTO(updatedUser));
+                            .body("User created successfully!");
                     });
             });
     }
 
-    public Mono<ResponseEntity<UserDTO>> registerUser(User user) {
-        // TODO Check the given user details and implement email verification logic
-        return createUser(user);
+
+    public Mono<ResponseEntity<String>> registerUser(UserRegisterDTO userDTO) {
+        List<String> errorMessages = new ArrayList<>();
+    
+        return userRepository.findByEmail(userDTO.getEmail())
+            .flatMap(existingUser -> 
+                Mono.just(ResponseEntity.badRequest().body("Email is already registered."))
+            )
+            .switchIfEmpty(
+                Mono.defer(() -> {
+                    if (!Validator.isValidEmail(userDTO.getEmail())) {
+                        errorMessages.add("Email is not valid!");
+                    }
+    
+                    if (!Validator.isStrongPassword(userDTO.getPassword())) {
+                        errorMessages.add("""
+                            Password is not strong enough. 
+                            Ensure it has at least 1 uppercase letter, 1 lowercase letter, 
+                            1 special character, and 1 numerical character.
+                        """);
+                    }
+    
+                    if (!userDTO.getPassword().equals(userDTO.getRePassword())) {
+                        errorMessages.add("Passwords do not match.");
+                    }
+    
+                    if (errorMessages.isEmpty()) {
+                        User user = new User();
+                        user.setEmail(userDTO.getEmail());
+                        user.setPassword(userDTO.getPassword());
+                        return createUser(user);
+                    } else {
+                        return Mono.just(ResponseEntity.badRequest().body(String.join(", ", errorMessages)));
+                    }
+                })
+            );
     }
+    
+    
 
     public Mono<User> authenticateUser(String email, String password) {
         return userRepository.findByEmail(email)

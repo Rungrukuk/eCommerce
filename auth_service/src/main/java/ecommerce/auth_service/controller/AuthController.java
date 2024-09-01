@@ -1,8 +1,9 @@
 package ecommerce.auth_service.controller;
 
-import ecommerce.auth_service.domain.User;
-import ecommerce.auth_service.dto.UserDTO;
+import ecommerce.auth_service.dto.UserRegisterDTO;
 import ecommerce.auth_service.service.AuthService;
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -23,7 +24,7 @@ public class AuthController {
     }
 
     @MessageMapping("registerUser")
-    public  Mono<ResponseEntity<UserDTO>> registerUser(User user) {
+    public  Mono<ResponseEntity<String>> registerUser(@Valid UserRegisterDTO user) {
         return authService.registerUser(user);
     }
 
