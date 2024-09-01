@@ -8,14 +8,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Table("users")
+@Table("Permissions")
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Permission {
     @Id
-    private String userId;
-    private String email;
-    private String password;
-    private Role role;
-    private String refreshToken;
+    private Long id;
+    private String name; 
 }

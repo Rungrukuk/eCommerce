@@ -1,5 +1,7 @@
 package ecommerce.auth_service.domain;
 
+import java.util.List;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -8,14 +10,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Table("users")
+@Table("Roles")
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Role {
     @Id
-    private String userId;
-    private String email;
-    private String password;
-    private Role role;
-    private String refreshToken;
+    private Long id;
+    private String name;
+    private List<Permission> permissions;
 }
