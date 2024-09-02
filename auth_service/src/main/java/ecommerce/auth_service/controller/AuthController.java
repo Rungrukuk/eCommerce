@@ -19,8 +19,7 @@ public class AuthController {
 
     @MessageMapping("validateToken")
     public Mono<Boolean> validateToken(String token) {
-        // Logic to validate token
-        return Mono.just(true); // Placeholder
+        return Mono.just(true);
     }
 
     @MessageMapping("registerUser")
@@ -28,9 +27,9 @@ public class AuthController {
         return authService.registerUser(user);
     }
 
-    // @MessageMapping("createGuest")
-    // public Mono<String> createGuest() {
-    //     return authService.createGuestUser();
-    // }
+    @MessageMapping("guestUser")
+    public Mono<ResponseEntity<Void>> createGuestUser() {
+        return authService.createGuestUser();
+    }
 }
 

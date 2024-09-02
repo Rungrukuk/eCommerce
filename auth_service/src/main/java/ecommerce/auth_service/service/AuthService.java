@@ -1,19 +1,27 @@
 package ecommerce.auth_service.service;
 
+import ecommerce.auth_service.domain.GuestUser;
 import ecommerce.auth_service.domain.User;
+import ecommerce.auth_service.dto.GuestUserDTO;
 import ecommerce.auth_service.dto.UserDTO;
 import ecommerce.auth_service.dto.UserRegisterDTO;
-import ecommerce.auth_service.mapper.UserMapper;
 import ecommerce.auth_service.repository.RoleRepository;
 import ecommerce.auth_service.repository.UserRepository;
 import ecommerce.auth_service.security.JwtTokenProvider;
+import ecommerce.auth_service.utils.GuestUserMapper;
+import ecommerce.auth_service.utils.RoleMapper;
+import ecommerce.auth_service.utils.UserMapper;
 import ecommerce.auth_service.utils.Validator;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,34 +34,52 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final ReactiveRedisOperations<String, GuestUser> redisOperations;
+    private final RoleRepository roleRepository;
 
     @Autowired
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
-                       JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder passwordEncoder) {
+                       JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder passwordEncoder,
+                       ReactiveRedisOperations<String, GuestUser> redisOperations) {
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
+        this.redisOperations = redisOperations;
+        this.roleRepository  = roleRepository;
     }
 
-    // public Mono<UserDTO> createGuestUser(String refreshToken) {
-    //     return roleRepository.findByName("GUEST")
-    //     .flatMap(role -> {
-    //         User newGuestUser = new User();
-    //         newGuestUser.setUserId(java.util.UUID.randomUUID().toString());
-    //         newGuestUser.setRole(RoleMapper.toRoleEntity(role));
-    //         newGuestUser.setRefreshToken(passwordEncoder.encode(refreshToken));
-    //         return userRepository.save(newGuestUser)
-    //                 .map(user -> {
-    //                     return UserMapper.toUserDTO(user);
-    //                 });
-    //     });
-    // }
+    public Mono<ResponseEntity<Void>> createGuestUser() {
+        String guestUserId = UUID.randomUUID().toString();
+        return roleRepository.findByName("GUEST").flatMap(
+            guestRole->{
+                GuestUserDTO guestUserDTO = new GuestUserDTO(guestUserId, guestRole);
+                String jwtToken = jwtTokenProvider.createToken(guestUserId, guestRole);
+                return redisOperations.opsForValue().set(guestUserId, GuestUserMapper.toGuestUserEntity(guestUserDTO), Duration.ofHours(24))
+                .flatMap(success -> {
+                    if (Boolean.TRUE.equals(success)) {
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(jwtToken);
+                        return Mono.just(ResponseEntity.status(HttpStatus.CREATED).headers(headers).build());
+                    } else {
+                        return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(null)); 
+                    }
+                });
+            }
+
+        );
+
+    }
+
+    public Mono<GuestUser> getGuestUser(String userId) {
+        return redisOperations.opsForValue().get(userId);
+    }
 
     public Mono<ResponseEntity<String>> createUser(User user) {
         return userRepository.save(user)
             .flatMap(savedUser -> {
                 UserDTO userDTO = UserMapper.toUserDTO(savedUser);
-                String jwtToken = jwtTokenProvider.createToken(userDTO);
+                String jwtToken = jwtTokenProvider.createToken(userDTO.getUserId(), userDTO.getRole());
                 String refreshToken = jwtTokenProvider.createRefreshToken(userDTO);
 
                 savedUser.setRefreshToken(passwordEncoder.encode(refreshToken));
@@ -97,10 +123,16 @@ public class AuthService {
                     }
     
                     if (errorMessages.isEmpty()) {
-                        User user = new User();
-                        user.setEmail(userDTO.getEmail());
-                        user.setPassword(userDTO.getPassword());
-                        return createUser(user);
+                        return roleRepository.findByName("ROLE").flatMap(
+                            roleDTO->{
+                                User user = new User();
+                                user.setEmail(userDTO.getEmail());
+                                user.setPassword(userDTO.getPassword());
+                                user.setRole(RoleMapper.toRoleEntity(roleDTO));
+                                return createUser(user);
+                            }
+                        );
+
                     } else {
                         return Mono.just(ResponseEntity.badRequest().body(String.join(", ", errorMessages)));
                     }
@@ -128,20 +160,15 @@ public class AuthService {
     }
 
     public Mono<String> refreshToken(String refreshToken) {
-        return userRepository.findByRefreshToken(refreshToken)
+        return userRepository.findByRefreshToken(passwordEncoder.encode(refreshToken))
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Invalid refresh token")))
                 .flatMap(user -> {
-                    if (passwordEncoder.matches(refreshToken, user.getRefreshToken())) {
-                        String newJwtToken = jwtTokenProvider.createToken(UserMapper.toUserDTO(user));
-                        String newRefreshToken = jwtTokenProvider.createRefreshToken(UserMapper.toUserDTO(user));
-                        String hashedRefreshToken = passwordEncoder.encode(newRefreshToken);
-
-                        user.setRefreshToken(hashedRefreshToken);
-                        return userRepository.save(user)
-                                .then(Mono.just(newJwtToken + " " + newRefreshToken));
-                    } else {
-                        return Mono.error(new IllegalArgumentException("Invalid refresh token"));
-                    }
+                    String newJwtToken = jwtTokenProvider.createToken(user.getUserId(), RoleMapper.toRoleDTO(user.getRole()));
+                    String newRefreshToken = jwtTokenProvider.createRefreshToken(UserMapper.toUserDTO(user));
+                    String hashedRefreshToken = passwordEncoder.encode(newRefreshToken);
+                    user.setRefreshToken(hashedRefreshToken);
+                    return userRepository.save(user)
+                            .then(Mono.just(newJwtToken + " " + newRefreshToken));
                 });
     }
 }

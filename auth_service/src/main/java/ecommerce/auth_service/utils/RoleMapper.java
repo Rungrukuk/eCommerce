@@ -1,4 +1,4 @@
-package ecommerce.auth_service.mapper;
+package ecommerce.auth_service.utils;
 
 import ecommerce.auth_service.domain.Role;
 import ecommerce.auth_service.dto.RoleDTO;
