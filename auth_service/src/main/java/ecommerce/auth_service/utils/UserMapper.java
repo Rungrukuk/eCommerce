@@ -1,6 +1,6 @@
 package ecommerce.auth_service.utils;
 
-import ecommerce.auth_service.domain.GuestUser;
+// import ecommerce.auth_service.domain.GuestUser;
 import ecommerce.auth_service.domain.User;
 import ecommerce.auth_service.dto.UserDTO;
 
@@ -19,17 +19,17 @@ public class UserMapper {
         return userDTO;
     }
 
-    public static UserDTO toUserDTO(GuestUser user) {
-        if (user == null) {
-            return null;
-        }
+    // public static UserDTO toUserDTO(GuestUser user) {
+    // if (user == null) {
+    // return null;
+    // }
 
-        UserDTO userDTO = new UserDTO();
-        userDTO.setUserId(user.getUserId());
-        userDTO.setRole(RoleMapper.toRoleDTO(user.getRole()));
+    // UserDTO userDTO = new UserDTO();
+    // userDTO.setUserId(user.getUserId());
+    // userDTO.setRole(RoleMapper.toRoleDTO(user.getRole()));
 
-        return userDTO;
-    }
+    // return userDTO;
+    // }
 
     public static User toUserEntity(UserDTO userDTO) {
         if (userDTO == null) {

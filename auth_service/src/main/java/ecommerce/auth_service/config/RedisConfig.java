@@ -7,19 +7,19 @@ import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
-import ecommerce.auth_service.domain.GuestUser;
+import ecommerce.auth_service.dto.UserDTO;
 
 @Configuration
 public class RedisConfig {
 
     @Bean
-    public ReactiveRedisOperations<String, GuestUser> redisOperations(ReactiveRedisConnectionFactory factory) {
-        Jackson2JsonRedisSerializer<GuestUser> serializer = new Jackson2JsonRedisSerializer<>(GuestUser.class);
+    public ReactiveRedisOperations<String, UserDTO> redisOperations(ReactiveRedisConnectionFactory factory) {
+        Jackson2JsonRedisSerializer<UserDTO> serializer = new Jackson2JsonRedisSerializer<>(UserDTO.class);
 
-        RedisSerializationContext.RedisSerializationContextBuilder<String, GuestUser> builder =
-                RedisSerializationContext.newSerializationContext(serializer);
+        RedisSerializationContext.RedisSerializationContextBuilder<String, UserDTO> builder = RedisSerializationContext
+                .newSerializationContext(serializer);
 
-        RedisSerializationContext<String, GuestUser> context = builder.build();
+        RedisSerializationContext<String, UserDTO> context = builder.build();
 
         return new ReactiveRedisTemplate<>(factory, context);
     }

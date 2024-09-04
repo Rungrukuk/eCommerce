@@ -14,11 +14,9 @@ public class RSocketSecurityConfig {
     @Bean
     public PayloadSocketAcceptorInterceptor rsocketInterceptor(RSocketSecurity rsocket) {
         return rsocket
-                .authorizePayload(authorize ->
-                    authorize
+                .authorizePayload(authorize -> authorize
                         .setup().authenticated()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .simpleAuthentication(Customizer.withDefaults())
                 .build();
     }
