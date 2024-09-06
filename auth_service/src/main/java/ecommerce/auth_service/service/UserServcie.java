@@ -46,6 +46,7 @@ public class UserServcie implements AuthService {
         this.validatorService = validatorService;
     }
 
+    // TODO Handle Creating the guest user
     public Mono<ResponseEntity<Void>> createGuestUser() {
         String guestUserId = UUID.randomUUID().toString();
         return roleRepository.findByName("GUEST").flatMap(
@@ -53,8 +54,9 @@ public class UserServcie implements AuthService {
                     UserDTO guestUserDTO = new UserDTO();
                     guestUserDTO.setUserId(guestUserId);
                     guestUserDTO.setRole(guestRole);
-                    String jwtToken = jwtTokenProvider.createToken(guestUserId, guestRole);
-                    return redisOperations.opsForValue().set(guestUserId, guestUserDTO, Duration.ofHours(24))
+                    String jwtToken = jwtTokenProvider.createAccessToken(guestUserId, guestRole);
+                    return redisOperations.opsForValue().set(guestUserId, guestUserDTO,
+                            Duration.ofHours(24))
                             .flatMap(success -> {
                                 if (Boolean.TRUE.equals(success)) {
                                     HttpHeaders headers = new HttpHeaders();
@@ -76,72 +78,7 @@ public class UserServcie implements AuthService {
         return redisOperations.opsForValue().get(userId);
     }
 
-    // public Mono<ResponseEntity<String>> createUser(User user) {
-    // return userRepository.save(user)
-    // .flatMap(savedUser -> {
-    // UserDTO userDTO = UserMapper.toUserDTO(savedUser);
-    // String jwtToken = jwtTokenProvider.createToken(userDTO.getUserId(),
-    // userDTO.getRole());
-    // String refreshToken = jwtTokenProvider.createRefreshToken(userDTO);
-
-    // savedUser.setRefreshToken(passwordEncoder.encode(refreshToken));
-    // return userRepository.save(savedUser)
-    // .map(updatedUser -> {
-    // HttpHeaders headers = new HttpHeaders();
-    // headers.setBearerAuth(jwtToken);
-    // headers.add("Refresh-Token", refreshToken);
-
-    // return ResponseEntity.status(201)
-    // .headers(headers)
-    // .body("User created successfully!");
-    // });
-    // });
-    // }
-
-    // public Mono<ResponseEntity<String>> registerUser(UserRegisterDTO userDTO) {
-    // List<String> errorMessages = new ArrayList<>();
-
-    // return userRepository.findByEmail(userDTO.getEmail())
-    // .flatMap(existingUser ->
-    // Mono.just(ResponseEntity.badRequest().body("Email is already registered."))
-    // )
-    // .switchIfEmpty(
-    // Mono.defer(() -> {
-    // if (!Validator.isValidEmail(userDTO.getEmail())) {
-    // errorMessages.add("Email is not valid!");
-    // }
-
-    // if (!Validator.isStrongPassword(userDTO.getPassword())) {
-    // errorMessages.add("""
-    // Password is not strong enough.
-    // Ensure it has at least 1 uppercase letter, 1 lowercase letter,
-    // 1 special character, and 1 numerical character.
-    // """);
-    // }
-
-    // if (!userDTO.getPassword().equals(userDTO.getRePassword())) {
-    // errorMessages.add("Passwords do not match.");
-    // }
-
-    // if (errorMessages.isEmpty()) {
-    // return roleRepository.findByName("ROLE").flatMap(
-    // roleDTO->{
-    // User user = new User();
-    // user.setEmail(userDTO.getEmail());
-    // user.setPassword(userDTO.getPassword());
-    // user.setRole(RoleMapper.toRoleEntity(roleDTO));
-    // return createUser(user);
-    // }
-    // );
-
-    // } else {
-    // return Mono.just(ResponseEntity.badRequest().body(String.join(", ",
-    // errorMessages)));
-    // }
-    // })
-    // );
-    // }
-
+    // TODO Handle authenticationo of the user
     // public Mono<User> authenticateUser(String email, String password) {
     // return userRepository.findByEmail(email)
     // .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
@@ -160,23 +97,6 @@ public class UserServcie implements AuthService {
     // });
     // }
 
-    // public Mono<String> refreshToken(String refreshToken) {
-    // return
-    // userRepository.findByRefreshToken(passwordEncoder.encode(refreshToken))
-    // .switchIfEmpty(Mono.error(new IllegalArgumentException("Invalid refresh
-    // token")))
-    // .flatMap(user -> {
-    // String newJwtToken = jwtTokenProvider.createToken(user.getUserId(),
-    // RoleMapper.toRoleDTO(user.getRole()));
-    // String newRefreshToken =
-    // jwtTokenProvider.createRefreshToken(UserMapper.toUserDTO(user));
-    // String hashedRefreshToken = passwordEncoder.encode(newRefreshToken);
-    // user.setRefreshToken(hashedRefreshToken);
-    // return userRepository.save(user)
-    // .then(Mono.just(newJwtToken + " " + newRefreshToken));
-    // });
-    // }
-
     @Override
     public Mono<UserResponse> createUser(UserCreateDTO userCreateDTO) {
         return Mono.fromCallable(() -> validatorService.validateData(userCreateDTO))
@@ -192,7 +112,7 @@ public class UserServcie implements AuthService {
                             .flatMap(userRole -> {
                                 String id = UUID.randomUUID().toString();
                                 String refreshToken = jwtTokenProvider.createRefreshToken(id, userRole);
-                                String accessToken = jwtTokenProvider.createToken(id, userRole);
+                                String accessToken = jwtTokenProvider.createAccessToken(id, userRole);
 
                                 User user = new User(
                                         id,
@@ -229,7 +149,6 @@ public class UserServcie implements AuthService {
 
     @Override
     public Mono<UserDTO> updateUser(UserDTO user) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'updateUser'");
     }
 }
