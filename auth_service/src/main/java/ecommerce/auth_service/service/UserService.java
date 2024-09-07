@@ -6,7 +6,6 @@ import ecommerce.auth_service.dto.UserResponse;
 import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.repository.RoleRepository;
 import ecommerce.auth_service.repository.UserRepository;
-import ecommerce.auth_service.security.JwtTokenProvider;
 import ecommerce.auth_service.utils.RoleMapper;
 // import ecommerce.auth_service.utils.UserMapper;
 
@@ -25,26 +24,25 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 @Service
-public class UserServcie implements AuthService {
-
-    private final UserRepository userRepository;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final BCryptPasswordEncoder passwordEncoder;
-    private final ReactiveRedisOperations<String, UserDTO> redisOperations;
-    private final RoleRepository roleRepository;
-    private final ValidatorService validatorService;
+public class UserService implements AuthService {
 
     @Autowired
-    public UserServcie(UserRepository userRepository, RoleRepository roleRepository,
-            JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder passwordEncoder,
-            ReactiveRedisOperations<String, UserDTO> redisOperations, ValidatorService validatorService) {
-        this.userRepository = userRepository;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.passwordEncoder = passwordEncoder;
-        this.redisOperations = redisOperations;
-        this.roleRepository = roleRepository;
-        this.validatorService = validatorService;
-    }
+    private UserRepository userRepository;
+
+    @Autowired
+    private TokenService tokenService;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private ReactiveRedisOperations<String, UserDTO> redisOperations;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private ValidatorService validatorService;
 
     // TODO Handle Creating the guest user
     public Mono<ResponseEntity<Void>> createGuestUser() {
@@ -54,7 +52,7 @@ public class UserServcie implements AuthService {
                     UserDTO guestUserDTO = new UserDTO();
                     guestUserDTO.setUserId(guestUserId);
                     guestUserDTO.setRole(guestRole);
-                    String jwtToken = jwtTokenProvider.createAccessToken(guestUserId, guestRole);
+                    String jwtToken = tokenService.createAccessToken(guestUserId, guestRole.getName());
                     return redisOperations.opsForValue().set(guestUserId, guestUserDTO,
                             Duration.ofHours(24))
                             .flatMap(success -> {
@@ -111,8 +109,8 @@ public class UserServcie implements AuthService {
                             .switchIfEmpty(Mono.error(new RuntimeException("Role not found")))
                             .flatMap(userRole -> {
                                 String id = UUID.randomUUID().toString();
-                                String refreshToken = jwtTokenProvider.createRefreshToken(id, userRole);
-                                String accessToken = jwtTokenProvider.createAccessToken(id, userRole);
+                                String refreshToken = tokenService.createRefreshToken(id, userRole.getName());
+                                String accessToken = tokenService.createAccessToken(id, userRole.getName());
 
                                 User user = new User(
                                         id,

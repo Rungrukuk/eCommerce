@@ -4,9 +4,10 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import ecommerce.auth_service.dto.RoleDTO;
 
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -17,6 +18,7 @@ import java.util.Base64;
 import java.util.Date;
 
 @Component
+@RequiredArgsConstructor
 public class JwtTokenProvider {
 
     private final PrivateKey accessTokenPrivateKey;
@@ -57,9 +59,9 @@ public class JwtTokenProvider {
         return kf.generatePublic(spec);
     }
 
-    public String createAccessToken(String userId, RoleDTO roleDTO) {
+    public String createAccessToken(String userId, String roleName) {
         Claims claims = Jwts.claims().setSubject(userId);
-        claims.put("role", roleDTO.getName());
+        claims.put("role", roleName);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenExpiration);
@@ -72,9 +74,9 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String createRefreshToken(String userId, RoleDTO roleDTO) {
+    public String createRefreshToken(String userId, String roleName) {
         Claims claims = Jwts.claims().setSubject(userId);
-        claims.put("role", roleDTO.getName());
+        claims.put("role", roleName);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + refreshTokenExpiration);

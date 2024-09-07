@@ -1,15 +1,16 @@
 package ecommerce.auth_service.controller;
 
+import ecommerce.auth_service.CreateUserRequest;
+import ecommerce.auth_service.CreateUserResponse;
 // import ecommerce.auth_service.dto.RoleDTO;
 import ecommerce.auth_service.dto.UserCreateDTO;
+import ecommerce.auth_service.service.TokenService;
 // import ecommerce.auth_service.security.JwtTokenProvider;
-import ecommerce.auth_service.service.UserServcie;
+import ecommerce.auth_service.service.UserService;
 // import io.jsonwebtoken.Jwt;
 // import io.jsonwebtoken.Claims;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
 // import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +25,10 @@ import reactor.core.publisher.Mono;
 public class AuthController {
 
     @Autowired
-    private UserServcie userService;
+    private UserService userService;
+
+    @Autowired
+    private TokenService tokenService;
 
     // @Autowired
     // private final JwtTokenProvider jwtTokenProvider;
@@ -41,28 +45,37 @@ public class AuthController {
     // }
 
     @MessageMapping("registerUser")
-    public Mono<ResponseEntity<String>> registerUser(UserCreateDTO userDTO) {
-        return userService.createUser(userDTO).flatMap(
-                userResponse -> {
+    public Mono<CreateUserResponse> registerUser(CreateUserRequest request) {
+        if (!tokenService.validateAccessToken(request.getAccessToken())) {
+            return Mono.just(CreateUserResponse.newBuilder()
+                    .setStatusCode(403)
+                    .setBody("Access Denied! Unauthorized Access")
+                    .build());
+        }
+
+        UserCreateDTO userCreateDTO = new UserCreateDTO(request.getEmail(), request.getPassword(),
+                request.getRePassword());
+
+        return userService.createUser(userCreateDTO)
+                .map(userResponse -> {
+                    CreateUserResponse.Builder responseBuilder = CreateUserResponse.newBuilder();
                     if (userResponse.getErrors().isEmpty()) {
-                        HttpHeaders headers = new HttpHeaders();
-                        headers.setBearerAuth(userResponse.getAccessToken());
-                        headers.add("Refresh-Token", userResponse.getRefreshToken());
-                        return Mono.just(
-                                ResponseEntity
-                                        .status(201)
-                                        .headers(headers)
-                                        .body("User Created Successfully"));
+                        responseBuilder
+                                .setAccessToken(userResponse.getAccessToken())
+                                .setRefreshToken(userResponse.getRefreshToken())
+                                .setStatusCode(201)
+                                .setBody("User Created Successfully");
                     } else {
-                        return Mono.just(
-                                ResponseEntity
-                                        .badRequest()
-                                        .body("User creation failed: " + String.join(", ", userResponse.getErrors())));
+                        responseBuilder
+                                .setStatusCode(400)
+                                .setBody("Bad Request")
+                                .addAllErrors(userResponse.getErrors());
                     }
+                    return responseBuilder.build();
                 });
     }
 
-    //TODO handle token creation and validation fopr the services
+    // TODO handle token creation and validation for the services: make sure to solve the target and source service problem 
     // @MessageMapping("validateAndCreateToken")
     // public Mono<String> validateAndCreateToken(String token) {
     // if (jwtTokenProvider.validateToken(token)) {
@@ -70,8 +83,8 @@ public class AuthController {
 
     // String userId = claims.getSubject(); // userId
     // RoleDTO role = claims.get("role", RoleDTO.class);
-    // String newToken = jwtTokenProvider.createGatewayToken(userId, role, "API
-    // Gateway", "SomeService");
+    // String newToken = jwtTokenProvider.createGatewayToken(userId, role,
+    // "APIGateway", "SomeService");
 
     // return Mono.just(newToken);
     // } else {
