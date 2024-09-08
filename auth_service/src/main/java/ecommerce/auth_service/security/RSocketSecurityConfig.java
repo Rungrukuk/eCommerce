@@ -15,8 +15,8 @@ public class RSocketSecurityConfig {
     public PayloadSocketAcceptorInterceptor rsocketInterceptor(RSocketSecurity rsocket) {
         return rsocket
                 .authorizePayload(authorize -> authorize
-                        .setup().authenticated()
-                        .anyRequest().authenticated())
+                        .setup().permitAll()
+                        .anyRequest().permitAll())
                 .simpleAuthentication(Customizer.withDefaults())
                 .build();
     }

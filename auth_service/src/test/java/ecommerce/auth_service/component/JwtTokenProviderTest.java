@@ -1,4 +1,4 @@
-package ecommerce.auth_service;
+package ecommerce.auth_service.component;
 
 import ecommerce.auth_service.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;

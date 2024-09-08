@@ -2,22 +2,13 @@ package ecommerce.auth_service.controller;
 
 import ecommerce.auth_service.CreateUserRequest;
 import ecommerce.auth_service.CreateUserResponse;
-// import ecommerce.auth_service.dto.RoleDTO;
 import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.service.TokenService;
-// import ecommerce.auth_service.security.JwtTokenProvider;
 import ecommerce.auth_service.service.UserService;
-// import io.jsonwebtoken.Jwt;
-// import io.jsonwebtoken.Claims;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
-// import org.springframework.web.bind.annotation.PostMapping;
-// import org.springframework.web.bind.annotation.RequestBody;
-
-// import com.google.protobuf.ByteString;
-
 import reactor.core.publisher.Mono;
 
 @Controller
@@ -30,6 +21,7 @@ public class AuthController {
     @Autowired
     private TokenService tokenService;
 
+    // TODO Implement RBAC
     @MessageMapping("registerUser")
     public Mono<CreateUserResponse> registerUser(CreateUserRequest request) {
         if (!tokenService.validateAccessToken(request.getAccessToken())) {
@@ -61,6 +53,7 @@ public class AuthController {
                 });
     }
 
-    // TODO handle token creation and validation for the services: make sure to solve the target and source service problem 
+    // TODO handle token creation and validation for the services: make sure to
+    // solve the target and source service problem
 
 }

@@ -1,4 +1,4 @@
-package ecommerce.auth_service;
+package ecommerce.auth_service.service;
 
 import ecommerce.auth_service.domain.Role;
 import ecommerce.auth_service.domain.User;
@@ -6,9 +6,6 @@ import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserResponse;
 import ecommerce.auth_service.repository.RoleRepository;
 import ecommerce.auth_service.repository.UserRepository;
-import ecommerce.auth_service.service.TokenService;
-import ecommerce.auth_service.service.UserService;
-import ecommerce.auth_service.service.ValidatorService;
 import ecommerce.auth_service.utils.RoleMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

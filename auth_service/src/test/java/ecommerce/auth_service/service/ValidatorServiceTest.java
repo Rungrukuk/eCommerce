@@ -1,7 +1,6 @@
-package ecommerce.auth_service;
+package ecommerce.auth_service.service;
 
 import ecommerce.auth_service.dto.UserCreateDTO;
-import ecommerce.auth_service.service.ValidatorService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

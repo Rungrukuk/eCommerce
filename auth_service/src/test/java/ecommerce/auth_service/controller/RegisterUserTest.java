@@ -1,6 +1,7 @@
-package ecommerce.auth_service;
+package ecommerce.auth_service.controller;
 
-import ecommerce.auth_service.controller.AuthController;
+import ecommerce.auth_service.CreateUserRequest;
+import ecommerce.auth_service.CreateUserResponse;
 import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserResponse;
 import ecommerce.auth_service.service.TokenService;
