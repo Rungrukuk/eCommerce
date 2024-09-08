@@ -10,9 +10,13 @@ import ecommerce.auth_service.dto.UserCreateDTO;
 
 @Service
 public class ValidatorService {
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+            "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.[a-zA-Z]{2,63}$");
 
     private static boolean isValidEmail(String email) {
+        if (email == null || email.isEmpty()) {
+            return false;
+        }
         return EMAIL_PATTERN.matcher(email).matches();
     }
 
@@ -34,7 +38,7 @@ public class ValidatorService {
 
     public List<String> validateData(UserCreateDTO userCreateDTO) {
         List<String> errors = new ArrayList<>();
-        if (isValidEmail(userCreateDTO.getEmail())) {
+        if (!isValidEmail(userCreateDTO.getEmail())) {
             errors.add("Email is not valid!");
         }
 

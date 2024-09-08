@@ -1,17 +1,16 @@
 package ecommerce.auth_service.service;
 
 import io.jsonwebtoken.Claims;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ecommerce.auth_service.security.JwtTokenProvider;
 
 @Service
 public class TokenService {
 
-    private final JwtTokenProvider jwtTokenProvider;
-
-    public TokenService(JwtTokenProvider jwtTokenProvider) {
-        this.jwtTokenProvider = jwtTokenProvider;
-    }
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     public String createAccessToken(String userId, String roleName) {
         return jwtTokenProvider.createAccessToken(userId, roleName);

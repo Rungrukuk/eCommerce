@@ -30,20 +30,6 @@ public class AuthController {
     @Autowired
     private TokenService tokenService;
 
-    // @Autowired
-    // private final JwtTokenProvider jwtTokenProvider;
-
-    // @MessageMapping("validateToken")
-    // public Mono<Boolean> validateToken(ByteString tokenByteString) {
-    // String token = new String(tokenByteString.toByteArray());
-    // // Validate token with JwtUtil
-    // try {
-    // return Mono.just(jwtTokenProvider.validateToken(token));
-    // } catch (Exception e) {
-    // return Mono.just(false);
-    // }
-    // }
-
     @MessageMapping("registerUser")
     public Mono<CreateUserResponse> registerUser(CreateUserRequest request) {
         if (!tokenService.validateAccessToken(request.getAccessToken())) {
@@ -76,37 +62,5 @@ public class AuthController {
     }
 
     // TODO handle token creation and validation for the services: make sure to solve the target and source service problem 
-    // @MessageMapping("validateAndCreateToken")
-    // public Mono<String> validateAndCreateToken(String token) {
-    // if (jwtTokenProvider.validateToken(token)) {
-    // Claims claims = jwtTokenProvider.getClaims(token);
 
-    // String userId = claims.getSubject(); // userId
-    // RoleDTO role = claims.get("role", RoleDTO.class);
-    // String newToken = jwtTokenProvider.createGatewayToken(userId, role,
-    // "APIGateway", "SomeService");
-
-    // return Mono.just(newToken);
-    // } else {
-    // return Mono.error(new RuntimeException("Invalid token"));
-    // }
-    // }
-
-    // @PostMapping("/add")
-    // public Mono<ResponseEntity<String>> addToCart(@RequestBody AddToCartRequest
-    // request,
-    // @AuthenticationPrincipal Jwt jwt) {
-    // String token = jwt.getTokenValue();
-    // return rSocketRequester.route("cart.add").metadata(token,
-    // "bearer").data(request).retrieveMono(String.class)
-    // .map(response -> ResponseEntity.ok(response)).onErrorResume(e ->
-    // Mono.just(ResponseEntity
-    // .status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " +
-    // e.getMessage())));
-    // }
-
-    // @MessageMapping("guestUser")
-    // public Mono<ResponseEntity<Void>> createGuestUser() {
-    // return userService.createGuestUser();
-    // }
 }

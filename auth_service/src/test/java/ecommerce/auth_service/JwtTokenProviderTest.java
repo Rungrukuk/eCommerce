@@ -1,22 +1,19 @@
-
 package ecommerce.auth_service;
 
 import ecommerce.auth_service.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
 public class JwtTokenProviderTest {
 
-    @MockBean
+    @Mock
     private JwtTokenProvider jwtTokenProvider;
 
     private String accessToken;
@@ -24,6 +21,8 @@ public class JwtTokenProviderTest {
 
     @BeforeEach
     public void setUp() throws Exception {
+        MockitoAnnotations.openMocks(this);
+
         when(jwtTokenProvider.createAccessToken(anyString(), anyString())).thenReturn("mockAccessToken");
         when(jwtTokenProvider.createRefreshToken(anyString(), anyString())).thenReturn("mockRefreshToken");
         when(jwtTokenProvider.validateAccessToken("mockAccessToken")).thenReturn(true);
