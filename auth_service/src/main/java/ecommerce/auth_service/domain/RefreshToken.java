@@ -8,13 +8,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Table("users")
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+@Table("RefreshTokens")
+public class RefreshToken {
     @Id
     private String userId;
-    private String email;
-    private String password;
-    private Role role;
+    private String refreshToken;
 }

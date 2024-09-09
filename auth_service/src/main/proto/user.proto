@@ -8,12 +8,9 @@ message CreateUserRequest {
     string email = 1;
     string password = 2;
     string rePassword = 3;
-    string accessToken = 4;
 }
 
 message CreateUserResponse {
-    string accessToken = 1;
-    string refreshToken = 2;
     int32 statusCode = 3;
     string body = 4;
     repeated string errors = 5;

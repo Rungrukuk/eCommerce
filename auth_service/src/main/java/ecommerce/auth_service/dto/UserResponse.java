@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 public class UserResponse {
     private String accessToken;
     private String refreshToken;
+    private String sessionId;
     private List<String> errors;
 }
