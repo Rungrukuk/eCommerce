@@ -145,6 +145,7 @@ public class UserService implements AuthService {
                                                                     userResponse.setRefreshToken(refreshToken);
                                                                     userResponse
                                                                             .setSessionId(savedSession.getSessionId());
+                                                                    userResponse.setErrors(errors);
                                                                     return userResponse;
                                                                 });
                                                     });

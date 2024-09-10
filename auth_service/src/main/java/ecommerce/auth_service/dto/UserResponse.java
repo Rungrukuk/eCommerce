@@ -2,16 +2,16 @@ package ecommerce.auth_service.dto;
 
 import java.util.List;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class UserResponse {
-    private String accessToken;
-    private String refreshToken;
-    private String sessionId;
-    private List<String> errors;
+public class UserResponse extends BaseResponse {
+
+    public UserResponse(String accessToken, String refreshToken, String sessionId, List<String> errors) {
+        super(accessToken, refreshToken, sessionId, errors);
+    }
 }

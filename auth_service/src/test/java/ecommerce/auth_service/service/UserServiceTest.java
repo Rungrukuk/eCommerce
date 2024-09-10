@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -109,7 +108,7 @@ class UserServiceTest {
                                                         "Refresh token mismatch");
                                         assertTrue(userResponse.getSessionId().equals(sessionId),
                                                         "Session ID mismatch");
-                                        assertNull(userResponse.getErrors(), "Errors should be null");
+                                        assertTrue(userResponse.getErrors().isEmpty(), "Errors should be null");
                                         return true;
                                 })
                                 .verifyComplete();
