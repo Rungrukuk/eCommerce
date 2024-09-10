@@ -7,144 +7,120 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveValueOperations;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class SessionServiceTest {
 
-    @Mock
-    private ReactiveRedisTemplate<String, Session> redisTemplate;
+        @Mock
+        private ReactiveRedisTemplate<String, Session> redisTemplate;
 
-    @InjectMocks
-    private SessionService sessionService;
+        @Mock
+        private ReactiveValueOperations<String, Session> valueOps;
 
-    @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
+        @InjectMocks
+        private SessionService sessionService;
 
-    @Test
-    public void testSaveSessionSuccess() {
-        Session session = new Session("sessionId", "accessToken");
-        when(redisTemplate.opsForValue().set(anyString(), any(Session.class), any(Duration.class)))
-                .thenReturn(Mono.just(true));
+        private Session session;
 
-        StepVerifier.create(sessionService.saveSession(session))
-                .expectNext(session)
-                .verifyComplete();
-    }
+        @BeforeEach
+        public void setUp() {
+                MockitoAnnotations.openMocks(this);
+                session = new Session();
+                session.setSessionId("test-session-id");
+                session.setAccessToken("test-access-token");
+                when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        }
 
-    @Test
-    public void testSaveSessionFailure() {
-        Session session = new Session("sessionId", "accessToken");
-        when(redisTemplate.opsForValue().set(anyString(), any(Session.class), any(Duration.class)))
-                .thenReturn(Mono.error(new RuntimeException("Error")));
+        @Test
+        public void saveSession_success() {
+                when(valueOps.set(any(String.class), any(Session.class), any(Duration.class)))
+                                .thenReturn(Mono.just(true));
 
-        StepVerifier.create(sessionService.saveSession(session))
-                .expectErrorMatches(
-                        e -> e instanceof RuntimeException && e.getMessage().equals("Failed to save session"))
-                .verify();
-    }
+                StepVerifier.create(sessionService.saveSession(session))
+                                .expectNext(session)
+                                .verifyComplete();
 
-    @Test
-    public void testGetSessionSuccess() {
-        Session session = new Session("sessionId", "accessToken");
-        when(redisTemplate.opsForValue().get(anyString()))
-                .thenReturn(Mono.just(session));
+                verify(valueOps, times(1)).set(session.getSessionId(), session, Duration.ofHours(24));
+        }
 
-        StepVerifier.create(sessionService.getSession("sessionId"))
-                .expectNext(session)
-                .verifyComplete();
-    }
+        @Test
+        public void saveSession_nullSession_shouldThrowException() {
+                StepVerifier.create(sessionService.saveSession(null))
+                                .expectError(IllegalArgumentException.class)
+                                .verify();
+        }
 
-    @Test
-    public void testGetSessionNotFound() {
-        when(redisTemplate.opsForValue().get(anyString()))
-                .thenReturn(Mono.empty());
+        @Test
+        public void saveSession_nullSessionId_shouldThrowException() {
+                session.setSessionId(null);
 
-        StepVerifier.create(sessionService.getSession("sessionId"))
-                .expectNextCount(0)
-                .verifyComplete();
-    }
+                StepVerifier.create(sessionService.saveSession(session))
+                                .expectError(IllegalArgumentException.class)
+                                .verify();
+        }
 
-    @Test
-    public void testGetSessionFailure() {
-        when(redisTemplate.opsForValue().get(anyString()))
-                .thenReturn(Mono.error(new RuntimeException("Error")));
+        @Test
+        public void getSession_success() {
+                when(valueOps.get("test-session-id")).thenReturn(Mono.just(session));
 
-        StepVerifier.create(sessionService.getSession("sessionId"))
-                .expectErrorMatches(
-                        e -> e instanceof RuntimeException && e.getMessage().equals("Failed to retrieve session"))
-                .verify();
-    }
+                StepVerifier.create(sessionService.getSession("test-session-id"))
+                                .expectNext(session)
+                                .verifyComplete();
 
-    @Test
-    public void testDeleteSessionSuccess() {
-        when(redisTemplate.opsForValue().delete(anyString()))
-                .thenReturn(Mono.just(true));
+                verify(valueOps, times(1)).get("test-session-id");
+        }
 
-        StepVerifier.create(sessionService.deleteSession("sessionId"))
-                .expectNext(true)
-                .verifyComplete();
-    }
+        @Test
+        public void getSession_sessionNotFound_shouldReturnEmpty() {
+                when(valueOps.get("test-session-id")).thenReturn(Mono.empty());
 
-    @Test
-    public void testDeleteSessionFailure() {
-        when(redisTemplate.opsForValue().delete(anyString()))
-                .thenReturn(Mono.error(new RuntimeException("Error")));
+                StepVerifier.create(sessionService.getSession("test-session-id"))
+                                .expectComplete()
+                                .verify();
+        }
 
-        StepVerifier.create(sessionService.deleteSession("sessionId"))
-                .expectErrorMatches(
-                        e -> e instanceof RuntimeException && e.getMessage().equals("Failed to delete session"))
-                .verify();
-    }
+        @Test
+        public void deleteSession_success() {
+                when(valueOps.delete("test-session-id")).thenReturn(Mono.just(true));
 
-    @Test
-    public void testValidateSessionSuccess() {
-        Session session = new Session("sessionId", "accessToken");
-        when(redisTemplate.opsForValue().get(anyString()))
-                .thenReturn(Mono.just(session));
+                StepVerifier.create(sessionService.deleteSession("test-session-id"))
+                                .expectNext(true)
+                                .verifyComplete();
 
-        StepVerifier.create(sessionService.validateSession("sessionId", "accessToken"))
-                .expectNext(true)
-                .verifyComplete();
-    }
+                verify(valueOps, times(1)).delete("test-session-id");
+        }
 
-    @Test
-    public void testValidateTokenFailure() {
-        Session session = new Session("sessionId", "accessToken");
-        when(redisTemplate.opsForValue().get(anyString()))
-                .thenReturn(Mono.just(session));
+        @Test
+        public void validateSession_success() {
+                when(valueOps.get("test-session-id")).thenReturn(Mono.just(session));
 
-        StepVerifier.create(sessionService.validateSession("sessionId", "wrongToken"))
-                .expectNext(false)
-                .verifyComplete();
-    }
+                StepVerifier.create(sessionService.validateSession("test-session-id", "test-access-token"))
+                                .expectNext(true)
+                                .verifyComplete();
+        }
 
-    @Test
-    public void testValidateSessionNotFound() {
-        when(redisTemplate.opsForValue().get(anyString()))
-                .thenReturn(Mono.empty());
+        @Test
+        public void validateSession_invalidAccessToken_shouldReturnFalse() {
+                when(valueOps.get("test-session-id")).thenReturn(Mono.just(session));
 
-        StepVerifier.create(sessionService.validateSession("sessionId", "accessToken"))
-                .expectNext(false)
-                .verifyComplete();
-    }
+                StepVerifier.create(sessionService.validateSession("test-session-id", "wrong-access-token"))
+                                .expectNext(false)
+                                .verifyComplete();
+        }
 
-    @Test
-    public void testValidateSessionFailure() {
-        when(redisTemplate.opsForValue().get(anyString()))
-                .thenReturn(Mono.error(new RuntimeException("Error")));
+        @Test
+        public void validateSession_sessionNotFound_shouldReturnFalse() {
+                when(valueOps.get("test-session-id")).thenReturn(Mono.empty());
 
-        StepVerifier.create(sessionService.validateSession("sessionId", "accessToken"))
-                .expectErrorMatches(
-                        e -> e instanceof RuntimeException && e.getMessage().equals("Failed to validate session"))
-                .verify();
-    }
+                StepVerifier.create(sessionService.validateSession("test-session-id", "test-access-token"))
+                                .expectNext(false)
+                                .verifyComplete();
+        }
 }

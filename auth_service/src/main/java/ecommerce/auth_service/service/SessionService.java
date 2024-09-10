@@ -14,13 +14,12 @@ public class SessionService {
     @Autowired
     private ReactiveRedisTemplate<String, Session> redisTemplate;
 
-    // Updated to return Mono<Session> instead of Mono<Void>
     public Mono<Session> saveSession(Session session) {
         if (session == null || session.getSessionId() == null) {
             return Mono.error(new IllegalArgumentException("Session or Session ID must not be null"));
         }
         return redisTemplate.opsForValue().set(session.getSessionId(), session, Duration.ofHours(24))
-                .then(Mono.just(session)) // Return the saved session after successful save
+                .then(Mono.just(session))
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to save session", e)));
     }
 
