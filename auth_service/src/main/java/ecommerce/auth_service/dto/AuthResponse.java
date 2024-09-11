@@ -8,16 +8,16 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class UserResponse extends BaseResponse {
-
+@EqualsAndHashCode(callSuper = true)
+public class AuthResponse extends BaseResponse {
+    private String serviceToken;
     private String refreshToken;
 
-
-    public UserResponse(String accessToken, String refreshToken, String sessionId, CustomResponseStatus responseStatus,
-            List<String> errors) {
+    public AuthResponse(String accessToken, String refreshToken, String sessionId,
+            CustomResponseStatus responseStatus, List<String> errors, String serviceToken) {
         super(accessToken, sessionId, responseStatus, errors);
+        this.serviceToken = serviceToken;
         this.refreshToken = refreshToken;
     }
 }

@@ -4,9 +4,9 @@ import ecommerce.auth_service.ProtoResponse;
 import ecommerce.auth_service.RequestProto.ProtoRequest;
 import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserResponse;
-import ecommerce.auth_service.service.SessionService;
+import ecommerce.auth_service.repository.SessionRepository;
 import ecommerce.auth_service.service.TokenService;
-import ecommerce.auth_service.service.UserService;
+import ecommerce.auth_service.service.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -25,13 +25,13 @@ import static org.mockito.Mockito.*;
 public class AuthControllerTest {
 
         @Mock
-        private UserService userService;
+        private UserServiceImpl userService;
 
         @Mock
         private TokenService tokenService;
 
         @Mock
-        private SessionService sessionService;
+        private SessionRepository sessionService;
 
         @InjectMocks
         private AuthController authController;

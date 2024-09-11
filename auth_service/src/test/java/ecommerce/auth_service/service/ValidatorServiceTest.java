@@ -1,6 +1,7 @@
 package ecommerce.auth_service.service;
 
 import ecommerce.auth_service.dto.UserCreateDTO;
+import ecommerce.auth_service.security.InputValidator;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,11 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ValidatorServiceTest {
 
-    private ValidatorService validatorService;
+    private InputValidator validatorService;
 
     @BeforeEach
     void setUp() {
-        validatorService = new ValidatorService();
+        validatorService = new InputValidator();
     }
 
     @Test

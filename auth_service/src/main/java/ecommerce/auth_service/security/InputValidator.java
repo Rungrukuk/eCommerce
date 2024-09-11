@@ -1,15 +1,15 @@
-package ecommerce.auth_service.service;
+package ecommerce.auth_service.security;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import ecommerce.auth_service.dto.UserCreateDTO;
 
-@Service
-public class ValidatorService {
+@Component
+public class InputValidator {
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.[a-zA-Z]{2,63}$");
 

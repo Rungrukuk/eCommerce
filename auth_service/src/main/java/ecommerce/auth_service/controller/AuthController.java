@@ -4,19 +4,14 @@ import ecommerce.auth_service.ProtoResponse;
 import ecommerce.auth_service.RequestProto.ProtoRequest;
 import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserResponse;
-import ecommerce.auth_service.service.SessionService;
-import ecommerce.auth_service.service.TokenService;
+import ecommerce.auth_service.service.AuthService;
 import ecommerce.auth_service.service.UserService;
-import io.jsonwebtoken.Claims;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
-
 import reactor.core.publisher.Mono;
-
-import java.util.Optional;
+import ecommerce.auth_service.util.CustomResponseStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Collections;
@@ -29,34 +24,55 @@ public class AuthController {
     private UserService userService;
 
     @Autowired
-    private TokenService tokenService;
+    private AuthService authService;
 
-    @Autowired
-    private SessionService sessionService;
-
-    // TODO RBAC
-    // TODO Create User Controller interface and implementation of it
-    // TODO send onErrorResume error to centralized error and log
+    // TODO handle authenticated user's(logged in user) registration
     @MessageMapping("registerUser")
     public Mono<ProtoResponse> registerUser(@Headers Map<String, String> metadata, ProtoRequest request) {
-        return validateAccessTokenAndSession(metadata.get("accessToken"), metadata.get("sessionId"))
-                .flatMap(isValid -> {
-                    if (!isValid) {
-                        return unauthorizedResponse();
-                    }
-                    return handleUserCreation(new UserCreateDTO(
-                            request.getDataOrDefault("email", ""),
-                            request.getDataOrDefault("password", ""),
-                            request.getDataOrDefault("rePassword", "")));
+        return authService.validate(metadata)
+                .flatMap(authResponse -> switch (authResponse.getResponseStatus()) {
+                    // Check if there are any need for creating new service token
+                    // TODO Instead of creating service token new user created event can be
+                    // published
+                    case CustomResponseStatus.AUTHORIZED_USER -> handleUserCreation(
+                            new UserCreateDTO(
+                                    request.getDataOrDefault("email", ""),
+                                    request.getDataOrDefault("password", ""),
+                                    request.getDataOrDefault("rePassword", "")));
+                    case CustomResponseStatus.UNAUTHORIZED_USER -> unauthorizedResponse(
+                            authResponse.getAccessToken(), authResponse.getSessionId());
+                    case CustomResponseStatus.SESSION_EXPIRED_CREATED_NEW_SESSION -> sessionExpiredResponse(
+                            authResponse.getAccessToken(), authResponse.getSessionId(), authResponse.getRefreshToken());
+                    default -> errorResponse("Unexpected error occurred. Please try again", 500);
                 })
                 .onErrorResume(e -> badRequestResponse("Bad Request", Collections.singletonList(e.getMessage()), 400));
     }
 
-    private Mono<Boolean> validateAccessTokenAndSession(String accessToken, String sessionId) {
-        return Optional.ofNullable(accessToken)
-                .filter(tokenService::validateAccessToken)
-                .map(token -> sessionService.validateSession(sessionId, accessToken))
-                .orElse(Mono.just(false));
+    @MessageMapping("validateToken")
+    public Mono<ProtoResponse> validateAndIssueNewToken(@Headers Map<String, String> metadata) {
+        return authService.validate(metadata)
+                .flatMap(authResponse -> switch (authResponse.getResponseStatus()) {
+                    case CustomResponseStatus.AUTHORIZED_USER -> buildResponseWithTokens(
+                            authResponse.getAccessToken(),
+                            authResponse.getSessionId(),
+                            authResponse.getServiceToken(),
+                            authResponse.getRefreshToken(),
+                            200,
+                            "");
+                    case CustomResponseStatus.SESSION_EXPIRED_CREATED_NEW_SESSION ->
+                        buildResponseWithTokens(
+                                authResponse.getAccessToken(),
+                                authResponse.getSessionId(),
+                                authResponse.getServiceToken(),
+                                authResponse.getRefreshToken(),
+                                200,
+                                "Your session has been refreshed");
+                    case CustomResponseStatus.UNAUTHORIZED_USER -> buildResponseWithErrors(
+                            authResponse.getAccessToken(),
+                            authResponse.getSessionId(),
+                            "Unauthorized Access", 401);
+                    default -> errorResponse("Unexpected error occurred. Please try again", 500);
+                });
     }
 
     private Mono<ProtoResponse> handleUserCreation(UserCreateDTO userCreateDTO) {
@@ -76,39 +92,57 @@ public class AuthController {
                 .build());
     }
 
-    private Mono<ProtoResponse> unauthorizedResponse() {
-        return badRequestResponse("Unauthorized Access!", null, 403);
+    private Mono<ProtoResponse> unauthorizedResponse(String accessToken, String sessionId) {
+        return buildResponseWithErrors(accessToken, sessionId, "Unauthorized Access", 401);
+    }
+
+    private Mono<ProtoResponse> sessionExpiredResponse(String accessToken, String sessionId, String refreshToken) {
+        return buildResponseWithTokens(accessToken, sessionId, null, refreshToken, 400,
+                "Please log out, to create new user");
     }
 
     private Mono<ProtoResponse> badRequestResponse(String message, List<String> errors, int statusCode) {
-        return Mono.just(ProtoResponse.newBuilder()
+        return errorResponse(message, statusCode, errors);
+    }
+
+    private Mono<ProtoResponse> buildResponseWithTokens(String accessToken, String sessionId, String serviceToken,
+            String refreshToken, int statusCode, String message) {
+        ProtoResponse.Builder responseBuilder = ProtoResponse.newBuilder()
                 .setStatusCode(statusCode)
                 .setMessage(message)
-                .addAllErrors(errors != null ? errors : Collections.emptyList())
+                .putMetadata("accessToken", accessToken)
+                .putMetadata("sessionId", sessionId);
+
+        if (serviceToken != null) {
+            responseBuilder.putMetadata("serviceToken", serviceToken);
+        }
+        if (refreshToken != null) {
+            responseBuilder.putMetadata("refreshToken", refreshToken);
+        }
+
+        return Mono.just(responseBuilder.build());
+    }
+
+    private Mono<ProtoResponse> buildResponseWithErrors(String accessToken, String sessionId, String errorMessage,
+            int statusCode) {
+        return Mono.just(ProtoResponse.newBuilder()
+                .putMetadata("accessToken", accessToken)
+                .putMetadata("sessionId", sessionId)
+                .setMessage(errorMessage)
+                .setStatusCode(statusCode)
+                .addErrors(errorMessage)
                 .build());
     }
 
-    // TODO Send new User Access Token and API GATEWAY ACCESS TOKEN
-    // TODO add role names to enum or maybe send roledto in the token
-    @MessageMapping("validateToken")
-    public Mono<ProtoResponse> validateAndIssueNewToken(@Headers Map<String, String> metadata) {
-        String accessToken = metadata.get("accessToken");
-        return validateAccessTokenAndSession(accessToken, metadata.get("sessionId"))
-                .flatMap(isValid -> {
-                    if (!isValid) {
-                        // TODO research and find in creating a new access token with guest user is a
-                        // good approach
-                        return unauthorizedResponse();
-                    }
-                    Claims claims = tokenService.getAccessTokenClaims(accessToken);
-                    String userId = claims.getSubject();
-                    String roleName = claims.get("role", String.class);
-                    String userAccessToken = tokenService.createAccessToken(userId, roleName);
-                    String gatewayAccessToken = tokenService.createAccessToken(userId, "API_GATEWAY");
-                    return Mono.just(ProtoResponse.newBuilder()
-                            .putMetadata("API_GATEWAY", gatewayAccessToken)
-                            .putMetadata("accessToken", userAccessToken).build());
-                });
+    private Mono<ProtoResponse> errorResponse(String message, int statusCode) {
+        return errorResponse(message, statusCode, Collections.singletonList("Internal Server Error"));
     }
 
+    private Mono<ProtoResponse> errorResponse(String message, int statusCode, List<String> errors) {
+        return Mono.just(ProtoResponse.newBuilder()
+                .setStatusCode(statusCode)
+                .setMessage(message)
+                .addAllErrors(errors)
+                .build());
+    }
 }

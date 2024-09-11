@@ -1,4 +1,4 @@
-package ecommerce.auth_service.service;
+package ecommerce.auth_service.repository;
 
 import ecommerce.auth_service.domain.Session;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,23 +7,23 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.UUID;
 
 @Service
-public class SessionService {
+public class SessionRepository {
 
     @Autowired
-    private ReactiveRedisTemplate<String, Session> redisTemplate;
+    private ReactiveRedisTemplate<String, String> redisTemplate;
 
-    public Mono<Session> saveSession(Session session) {
-        if (session == null || session.getSessionId() == null) {
-            return Mono.error(new IllegalArgumentException("Session or Session ID must not be null"));
-        }
-        return redisTemplate.opsForValue().set(session.getSessionId(), session, Duration.ofHours(24))
+    public Mono<Session> saveSession(String accessToken) {
+        String sessionId = UUID.randomUUID().toString();
+        Session session = new Session(sessionId, accessToken);
+        return redisTemplate.opsForValue().set(sessionId, accessToken, Duration.ofHours(24))
                 .then(Mono.just(session))
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to save session", e)));
     }
 
-    public Mono<Session> getSession(String sessionId) {
+    public Mono<String> getSessionAccessToken(String sessionId) {
         if (sessionId == null) {
             return Mono.error(new IllegalArgumentException("Session ID must not be null"));
         }
@@ -41,7 +41,7 @@ public class SessionService {
 
     public Mono<Boolean> validateSession(String sessionId, String accessToken) {
         return redisTemplate.opsForValue().get(sessionId)
-                .map(session -> session.getAccessToken().equals(accessToken))
+                .map(savedAccessToken -> accessToken.equals(accessToken))
                 .defaultIfEmpty(false)
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to validate session", e)));
     }

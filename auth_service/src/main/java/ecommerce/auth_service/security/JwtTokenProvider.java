@@ -6,7 +6,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
 import org.springframework.beans.factory.annotation.Value;
-// import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Component;
 
 import java.security.KeyFactory;
@@ -23,6 +22,9 @@ public class JwtTokenProvider {
     private final PrivateKey accessTokenPrivateKey;
     private final PublicKey accessTokenPublicKey;
 
+    private final PrivateKey serviceTokenPrivateKey;
+    private final PublicKey serviceTokenPublicKey;
+
     private final PrivateKey refreshTokenPrivateKey;
     private final PublicKey refreshTokenPublicKey;
 
@@ -30,18 +32,27 @@ public class JwtTokenProvider {
 
     private final long refreshTokenExpiration;
 
-    public JwtTokenProvider(@Value("${jwt.access.private.key}") String accessPrivateKeyStr,
+    private final long serviceTokenExpiration;
+
+    public JwtTokenProvider(
+            @Value("${jwt.access.private.key}") String accessPrivateKeyStr,
             @Value("${jwt.access.public.key}") String accessPublicKeyStr,
             @Value("${jwt.refresh.private.key}") String refreshPrivateKeyStr,
             @Value("${jwt.refresh.public.key}") String refreshPublicKeyStr,
             @Value("${jwt.access.expiration}") long accessTokenExpiration,
-            @Value("${jwt.refresh.expiration}") long refreshTokenExpiration) throws Exception {
+            @Value("${jwt.refresh.expiration}") long refreshTokenExpiration,
+            @Value("${jwt.service.private.key}") String servicePrivateKeyStr,
+            @Value("${jwt.service.public.key}") String servicePublicKeyStr,
+            @Value("${jwt.service.expiration}") long serviceTokenExpiration) throws Exception {
         this.accessTokenPrivateKey = getPrivateKeyFromString(accessPrivateKeyStr);
         this.accessTokenPublicKey = getPublicKeyFromString(accessPublicKeyStr);
         this.refreshTokenPrivateKey = getPrivateKeyFromString(refreshPrivateKeyStr);
         this.refreshTokenPublicKey = getPublicKeyFromString(refreshPublicKeyStr);
+        this.serviceTokenPrivateKey = getPrivateKeyFromString(servicePublicKeyStr);
+        this.serviceTokenPublicKey = getPublicKeyFromString(servicePublicKeyStr);
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
+        this.serviceTokenExpiration = serviceTokenExpiration;
     }
 
     private PrivateKey getPrivateKeyFromString(String key) throws Exception {
@@ -73,6 +84,22 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String createServiceToken(String userId, String roleName, String audience) {
+        Claims claims = Jwts.claims().setSubject(userId);
+        claims.put("role", roleName);
+        claims.setAudience(audience);
+
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + serviceTokenExpiration);
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(serviceTokenPrivateKey, SignatureAlgorithm.RS512)
+                .compact();
+    }
+
     public String createRefreshToken(String userId, String roleName) {
         Claims claims = Jwts.claims().setSubject(userId);
         claims.put("role", roleName);
@@ -96,6 +123,10 @@ public class JwtTokenProvider {
         return validateToken(token, refreshTokenPublicKey);
     }
 
+    public boolean validateServiceToken(String token) {
+        return validateToken(token, serviceTokenPublicKey);
+    }
+
     private boolean validateToken(String token, PublicKey publicKey) {
         try {
             JwtParser jwtParser = Jwts.parserBuilder()
@@ -112,18 +143,23 @@ public class JwtTokenProvider {
         }
     }
 
-    public Claims getClaims(String token, PublicKey publicKey) {
+    private Claims getClaims(String token, PublicKey publicKey) {
         JwtParser jwtParser = Jwts.parserBuilder()
                 .setSigningKey(publicKey)
                 .build();
         return jwtParser.parseClaimsJws(token).getBody();
     }
 
-    public PublicKey getAccessTokenPublicKey() {
-        return accessTokenPublicKey;
+    public Claims getAccessTokenClaims(String token) {
+        return getClaims(token, accessTokenPublicKey);
     }
 
-    public PublicKey getRefreshTokenPublicKey() {
-        return refreshTokenPublicKey;
+    public Claims getRefreshTokenClaims(String token) {
+        return getClaims(token, refreshTokenPublicKey);
     }
+
+    public Claims getServiceTokenClaims(String token) {
+        return getClaims(token, serviceTokenPublicKey);
+    }
+
 }

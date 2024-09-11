@@ -8,7 +8,10 @@ import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserResponse;
 import ecommerce.auth_service.repository.RefreshTokenRepository;
 import ecommerce.auth_service.repository.RoleRepository;
+import ecommerce.auth_service.repository.SessionRepository;
 import ecommerce.auth_service.repository.UserRepository;
+import ecommerce.auth_service.security.InputValidator;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -45,19 +48,19 @@ class UserServiceTest {
         private TokenService tokenService;
 
         @Mock
-        private SessionService sessionService;
+        private SessionRepository sessionService;
 
         @Mock
         private BCryptPasswordEncoder passwordEncoder;
 
         @Mock
-        private ValidatorService validatorService;
+        private InputValidator validatorService;
 
         @Mock
         private TransactionalOperator transactionalOperator;
 
         @InjectMocks
-        private UserService userService;
+        private UserServiceImpl userService;
 
         @BeforeEach
         void setUp() {

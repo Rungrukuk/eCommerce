@@ -1,6 +1,8 @@
 package ecommerce.auth_service.service;
 
 import ecommerce.auth_service.domain.Session;
+import ecommerce.auth_service.repository.SessionRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -25,7 +27,7 @@ public class SessionServiceTest {
         private ReactiveValueOperations<String, Session> valueOps;
 
         @InjectMocks
-        private SessionService sessionService;
+        private SessionRepository sessionService;
 
         private Session session;
 
