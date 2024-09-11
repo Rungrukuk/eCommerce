@@ -50,7 +50,7 @@ public class InputValidator {
                     """);
         }
 
-        if (!userCreateDTO.getPassword().equals(userCreateDTO.getRePassword())) {
+        if (userCreateDTO.getPassword() != userCreateDTO.getRePassword()) {
             errors.add("Passwords do not match.");
         }
         return errors;

@@ -3,13 +3,13 @@ package ecommerce.auth_service.repository;
 import ecommerce.auth_service.domain.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.UUID;
 
-@Service
+@Repository
 public class SessionRepository {
 
     @Autowired

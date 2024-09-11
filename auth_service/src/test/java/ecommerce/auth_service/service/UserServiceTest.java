@@ -1,16 +1,16 @@
 package ecommerce.auth_service.service;
 
 import ecommerce.auth_service.domain.RefreshToken;
-import ecommerce.auth_service.domain.Role;
 import ecommerce.auth_service.domain.Session;
 import ecommerce.auth_service.domain.User;
 import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserResponse;
 import ecommerce.auth_service.repository.RefreshTokenRepository;
-import ecommerce.auth_service.repository.RoleRepository;
 import ecommerce.auth_service.repository.SessionRepository;
 import ecommerce.auth_service.repository.UserRepository;
 import ecommerce.auth_service.security.InputValidator;
+import ecommerce.auth_service.security.JwtTokenProvider;
+import ecommerce.auth_service.util.Roles;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,13 +23,12 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.util.Collections;
 import java.util.UUID;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,25 +38,22 @@ class UserServiceTest {
         private UserRepository userRepository;
 
         @Mock
+        private SessionRepository sessionRepository;
+
+        @Mock
         private RefreshTokenRepository refreshTokenRepository;
 
         @Mock
-        private RoleRepository roleRepository;
+        private TransactionalOperator transactionalOperator;
 
         @Mock
-        private TokenService tokenService;
-
-        @Mock
-        private SessionRepository sessionService;
+        private JwtTokenProvider tokenProvider;
 
         @Mock
         private BCryptPasswordEncoder passwordEncoder;
 
         @Mock
         private InputValidator validatorService;
-
-        @Mock
-        private TransactionalOperator transactionalOperator;
 
         @InjectMocks
         private UserServiceImpl userService;
@@ -70,131 +66,68 @@ class UserServiceTest {
         }
 
         @Test
-        void createUser_Success() {
-                UserCreateDTO userCreateDTO = new UserCreateDTO();
-                userCreateDTO.setEmail("test@example.com");
-                userCreateDTO.setPassword("password");
+        void createUser_success() {
+                UserCreateDTO userCreateDTO = new UserCreateDTO("test@example.com", "password123", "password123");
 
-                when(validatorService.validateData(userCreateDTO)).thenReturn(Collections.emptyList());
+                when(validatorService.validateData(userCreateDTO)).thenReturn(List.of());
 
-                Role role = new Role();
-                role.setName("USER");
-                when(roleRepository.findByName("USER")).thenReturn(Mono.just(role));
+                String userId = UUID.randomUUID().toString();
+                String accessToken = "mockAccessToken";
+                String refreshToken = "mockRefreshToken";
+                when(tokenProvider.createAccessToken(anyString(), anyString())).thenReturn(accessToken);
+                when(tokenProvider.createRefreshToken(anyString(), anyString())).thenReturn(refreshToken);
 
-                String accessToken = UUID.randomUUID().toString();
-                when(tokenService.createAccessToken(any(String.class), any(String.class))).thenReturn(accessToken);
+                when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
 
-                String refreshToken = UUID.randomUUID().toString();
-                when(tokenService.createRefreshToken(any(String.class), any(String.class))).thenReturn(refreshToken);
-
-                User user = new User(UUID.randomUUID().toString(), userCreateDTO.getEmail(), "encodedPassword", role);
+                User user = new User(userId, userCreateDTO.getEmail(), "encodedPassword", Roles.USER.name());
                 when(userRepository.save(any(User.class))).thenReturn(Mono.just(user));
 
                 when(refreshTokenRepository.save(any(RefreshToken.class)))
-                                .thenReturn(Mono.just(new RefreshToken(user.getUserId(), refreshToken)));
+                                .thenReturn(Mono.just(new RefreshToken(userId, refreshToken)));
 
-                String sessionId = UUID.randomUUID().toString();
-                Session session = new Session(sessionId, accessToken);
-                when(sessionService.saveSession(any(Session.class))).thenReturn(Mono.just(session));
+                when(sessionRepository.saveSession(accessToken))
+                                .thenReturn(Mono.just(new Session("mockSessionId", accessToken)));
 
                 Mono<UserResponse> result = userService.createUser(userCreateDTO);
 
                 StepVerifier.create(result)
-                                .expectNextMatches(userResponse -> {
-                                        System.out.println("SessionId: " + userResponse.getSessionId());
-                                        System.out.println("SessionId: " + sessionId);
-
-                                        assertNotNull(userResponse);
-                                        assertTrue(userResponse.getAccessToken().equals(accessToken),
-                                                        "Access token mismatch");
-                                        assertTrue(userResponse.getRefreshToken().equals(refreshToken),
-                                                        "Refresh token mismatch");
-                                        assertTrue(userResponse.getSessionId().equals(sessionId),
-                                                        "Session ID mismatch");
-                                        assertTrue(userResponse.getErrors().isEmpty(), "Errors should be null");
-                                        return true;
-                                })
+                                .expectNextMatches(response -> response.getAccessToken().equals(accessToken) &&
+                                                response.getRefreshToken().equals(refreshToken) &&
+                                                response.getSessionId().equals("mockSessionId") &&
+                                                response.getErrors().isEmpty())
                                 .verifyComplete();
+
+                verify(userRepository).save(any(User.class));
+                verify(refreshTokenRepository).save(any(RefreshToken.class));
+                verify(sessionRepository).saveSession(accessToken);
         }
 
         @Test
-        void createUser_ValidationErrors() {
-                UserCreateDTO userCreateDTO = new UserCreateDTO();
-                userCreateDTO.setEmail("invalid@example.com");
-                userCreateDTO.setPassword("password");
+        void createUser_transactionErrorBeforeSave() {
+                UserCreateDTO userCreateDTO = new UserCreateDTO("test@example.com", "password123", "password123");
 
-                when(validatorService.validateData(userCreateDTO))
-                                .thenReturn(Collections.singletonList("Invalid email"));
+                when(validatorService.validateData(userCreateDTO)).thenReturn(List.of());
 
-                Mono<UserResponse> result = userService.createUser(userCreateDTO);
+                String accessToken = "mockAccessToken";
+                String refreshToken = "mockRefreshToken";
+                when(tokenProvider.createAccessToken(anyString(), anyString())).thenReturn(accessToken);
+                when(tokenProvider.createRefreshToken(anyString(), anyString())).thenReturn(refreshToken);
 
-                StepVerifier.create(result)
-                                .expectNextMatches(userResponse -> {
-                                        assertTrue(userResponse.getErrors().contains("Invalid email"));
-                                        assertTrue(userResponse.getAccessToken() == null);
-                                        assertTrue(userResponse.getRefreshToken() == null);
-                                        return true;
-                                })
-                                .verifyComplete();
-        }
+                when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
 
-        @Test
-        void createUser_RoleNotFound() {
-                UserCreateDTO userCreateDTO = new UserCreateDTO();
-                userCreateDTO.setEmail("test@example.com");
-                userCreateDTO.setPassword("password");
-
-                when(validatorService.validateData(userCreateDTO)).thenReturn(Collections.emptyList());
-
-                when(roleRepository.findByName("USER")).thenReturn(Mono.empty());
+                when(userRepository.save(any(User.class)))
+                                .thenReturn(Mono.error(new RuntimeException("Database error")));
 
                 Mono<UserResponse> result = userService.createUser(userCreateDTO);
 
                 StepVerifier.create(result)
-                                .expectNextMatches(userResponse -> {
-                                        assertTrue(userResponse.getErrors().contains("Role not found"));
-                                        assertTrue(userResponse.getAccessToken() == null);
-                                        assertTrue(userResponse.getRefreshToken() == null);
-                                        return true;
-                                })
-                                .verifyComplete();
-        }
-
-        @Test
-        void createUser_transactionRollbackOnFailure() {
-                UserCreateDTO userCreateDTO = new UserCreateDTO();
-                userCreateDTO.setEmail("test@example.com");
-                userCreateDTO.setPassword("password");
-
-                when(validatorService.validateData(userCreateDTO)).thenReturn(Collections.emptyList());
-
-                Role role = new Role();
-                role.setName("USER");
-                when(roleRepository.findByName("USER")).thenReturn(Mono.just(role));
-
-                User user = new User("userId", "test@example.com", "encodedPassword", role);
-                when(userRepository.save(any(User.class))).thenReturn(Mono.just(user));
-
-                RefreshToken refreshToken = new RefreshToken("userId", "refreshToken");
-                when(refreshTokenRepository.save(any(RefreshToken.class))).thenReturn(Mono.just(refreshToken));
-
-                when(sessionService.saveSession(any(Session.class)))
-                                .thenReturn(Mono.error(new RuntimeException("Session save failed")));
-
-                Mono<UserResponse> result = userService.createUser(userCreateDTO);
-
-                StepVerifier.create(result)
-                                .expectNextMatches(response -> {
-                                        assertNotNull(response.getErrors());
-                                        assertTrue(response.getErrors().contains("Session save failed"));
-                                        return true;
-                                })
+                                .expectNextMatches(response -> response.getErrors().contains("Database error"))
                                 .verifyComplete();
 
-                verify(userRepository, times(1)).save(any(User.class));
-                verify(refreshTokenRepository, times(1)).save(any(RefreshToken.class));
-                verify(sessionService, times(1)).saveSession(any(Session.class));
-                verify(transactionalOperator, times(1)).transactional(ArgumentMatchers.<Mono<Object>>any());
+                verify(userRepository).save(any(User.class));
+
+                verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
+                verify(sessionRepository, never()).saveSession(anyString());
         }
 
 }

@@ -2,7 +2,7 @@ package ecommerce.auth_service.repository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
 import ecommerce.auth_service.dto.UserDTO;
 import reactor.core.publisher.Mono;
@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.UUID;
 
-@Service
+@Repository
 // TODO Instead of storing role, store user agent data
 public class GuestUserRepository {
 

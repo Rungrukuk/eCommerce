@@ -39,16 +39,16 @@ public class JwtTokenProvider {
             @Value("${jwt.access.public.key}") String accessPublicKeyStr,
             @Value("${jwt.refresh.private.key}") String refreshPrivateKeyStr,
             @Value("${jwt.refresh.public.key}") String refreshPublicKeyStr,
-            @Value("${jwt.access.expiration}") long accessTokenExpiration,
-            @Value("${jwt.refresh.expiration}") long refreshTokenExpiration,
             @Value("${jwt.service.private.key}") String servicePrivateKeyStr,
             @Value("${jwt.service.public.key}") String servicePublicKeyStr,
+            @Value("${jwt.access.expiration}") long accessTokenExpiration,
+            @Value("${jwt.refresh.expiration}") long refreshTokenExpiration,
             @Value("${jwt.service.expiration}") long serviceTokenExpiration) throws Exception {
         this.accessTokenPrivateKey = getPrivateKeyFromString(accessPrivateKeyStr);
         this.accessTokenPublicKey = getPublicKeyFromString(accessPublicKeyStr);
         this.refreshTokenPrivateKey = getPrivateKeyFromString(refreshPrivateKeyStr);
         this.refreshTokenPublicKey = getPublicKeyFromString(refreshPublicKeyStr);
-        this.serviceTokenPrivateKey = getPrivateKeyFromString(servicePublicKeyStr);
+        this.serviceTokenPrivateKey = getPrivateKeyFromString(servicePrivateKeyStr);
         this.serviceTokenPublicKey = getPublicKeyFromString(servicePublicKeyStr);
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
