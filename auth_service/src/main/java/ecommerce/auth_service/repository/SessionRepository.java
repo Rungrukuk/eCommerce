@@ -41,7 +41,7 @@ public class SessionRepository {
 
     public Mono<Boolean> validateSession(String sessionId, String accessToken) {
         return redisTemplate.opsForValue().get(sessionId)
-                .map(savedAccessToken -> accessToken.equals(accessToken))
+                .map(savedAccessToken -> accessToken.equals(savedAccessToken))
                 .defaultIfEmpty(false)
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to validate session", e)));
     }

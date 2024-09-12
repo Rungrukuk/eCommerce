@@ -1,25 +1,28 @@
-package ecommerce.auth_service.config;
+// package ecommerce.auth_service.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
+// import
+// org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+// import org.springframework.data.redis.core.ReactiveRedisTemplate;
+// import org.springframework.data.redis.serializer.RedisSerializationContext;
+// import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-@Configuration
-public class RedisConfig {
+// @Configuration
+// public class RedisConfig {
 
-        @Bean
-        public ReactiveRedisTemplate<String, String> redisTemplate(ReactiveRedisConnectionFactory factory) {
-                StringRedisSerializer stringSerializer = new StringRedisSerializer();
-                RedisSerializationContext.RedisSerializationContextBuilder<String, String> builder = RedisSerializationContext
-                                .newSerializationContext(stringSerializer);
-                RedisSerializationContext<String, String> context = builder
-                                .key(stringSerializer)
-                                .value(stringSerializer)
-                                .build();
+// @Bean
+// public ReactiveRedisTemplate<String, String>
+// reactiveRedisTemplate(ReactiveRedisConnectionFactory factory) {
+// RedisSerializationContext<String, String> serializationContext =
+// RedisSerializationContext
+// .<String, String>newSerializationContext(new StringRedisSerializer())
+// .key(new StringRedisSerializer())
+// .value(new StringRedisSerializer())
+// .hashKey(new StringRedisSerializer())
+// .hashValue(new StringRedisSerializer())
+// .build();
 
-                return new ReactiveRedisTemplate<>(factory, context);
-        }
-}
+// return new ReactiveRedisTemplate<>(factory, serializationContext);
+// }
+// }

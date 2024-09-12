@@ -1,141 +1,180 @@
 package ecommerce.auth_service.repository;
 
-import ecommerce.auth_service.domain.Session;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveValueOperations;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.time.Duration;
+
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import java.time.Duration;
-
 class SessionRepositoryTest {
 
-    @Mock
-    private ReactiveRedisTemplate<String, String> redisTemplate;
+        @Mock
+        private ReactiveRedisTemplate<String, String> redisTemplate;
 
-    @InjectMocks
-    private SessionRepository sessionRepository;
+        @Mock
+        private ReactiveValueOperations<String, String> valueOperations;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
+        @InjectMocks
+        private SessionRepository sessionRepository;
 
-    @Test
-    void saveSession_success() {
-        String accessToken = "mockAccessToken";
-        String sessionId = "mockSessionId";
+        @BeforeEach
+        void setUp() {
+                MockitoAnnotations.openMocks(this);
+                when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        }
 
-        when(redisTemplate.opsForValue().set(sessionId, anyString(), any(Duration.class))).thenReturn(Mono.just(true));
+        @Test
+        void saveSession_Success() {
+                String accessToken = "testAccessToken";
 
-        Mono<Session> result = sessionRepository.saveSession(accessToken);
+                when(valueOperations.set(anyString(), eq(accessToken), eq(Duration.ofHours(24))))
+                                .thenReturn(Mono.just(true));
 
-        StepVerifier.create(result)
-                .expectNextMatches(
-                        session -> session.getAccessToken().equals(accessToken)
-                                && session.getSessionId().equals(sessionId))
-                .verifyComplete();
+                StepVerifier.create(sessionRepository.saveSession(accessToken))
+                                .expectNextMatches(savedSession -> savedSession.getAccessToken().equals(accessToken)
+                                                && savedSession.getSessionId() != null)
+                                .verifyComplete();
 
-        verify(redisTemplate).opsForValue().set(anyString(), eq(accessToken), any(Duration.class));
-    }
+                verify(valueOperations, times(1)).set(any(String.class), eq(accessToken), eq(Duration.ofHours(24)));
+        }
 
-    @Test
-    void getSessionAccessToken_success() {
-        String sessionId = "mockSessionId";
-        String accessToken = "mockAccessToken";
+        @Test
+        void saveSession_Error() {
+                String accessToken = "testAccessToken";
 
-        when(redisTemplate.opsForValue().get(sessionId)).thenReturn(Mono.just(accessToken));
+                when(valueOperations.set(any(String.class), eq(accessToken), eq(Duration.ofHours(24))))
+                                .thenReturn(Mono.error(new RuntimeException("Redis error")));
 
-        Mono<String> result = sessionRepository.getSessionAccessToken(sessionId);
+                StepVerifier.create(sessionRepository.saveSession(accessToken))
+                                .expectErrorMatches(throwable -> throwable instanceof RuntimeException
+                                                && throwable.getMessage().equals("Failed to save session"))
+                                .verify();
 
-        StepVerifier.create(result)
-                .expectNext(accessToken)
-                .verifyComplete();
+                verify(valueOperations, times(1)).set(any(String.class), eq(accessToken), eq(Duration.ofHours(24)));
+        }
 
-        verify(redisTemplate).opsForValue().get(sessionId);
-    }
+        @Test
+        void getSessionAccessToken_Success() {
+                String sessionId = "testSessionId";
+                String accessToken = "testAccessToken";
 
-    @Test
-    void getSessionAccessToken_nullSessionId() {
-        Mono<String> result = sessionRepository.getSessionAccessToken(null);
+                when(valueOperations.get(sessionId)).thenReturn(Mono.just(accessToken));
 
-        StepVerifier.create(result)
-                .expectError(IllegalArgumentException.class)
-                .verify();
-    }
+                StepVerifier.create(sessionRepository.getSessionAccessToken(sessionId))
+                                .expectNext(accessToken)
+                                .verifyComplete();
 
-    @Test
-    void deleteSession_success() {
-        String sessionId = "mockSessionId";
+                verify(valueOperations, times(1)).get(sessionId);
+        }
 
-        when(redisTemplate.opsForValue().delete(sessionId)).thenReturn(Mono.just(true));
+        @Test
+        void getSessionAccessToken_Error() {
+                String sessionId = "testSessionId";
 
-        Mono<Boolean> result = sessionRepository.deleteSession(sessionId);
+                when(valueOperations.get(sessionId)).thenReturn(Mono.error(new RuntimeException("Redis error")));
 
-        StepVerifier.create(result)
-                .expectNext(true)
-                .verifyComplete();
+                StepVerifier.create(sessionRepository.getSessionAccessToken(sessionId))
+                                .expectErrorMatches(throwable -> throwable instanceof RuntimeException
+                                                && throwable.getMessage().equals("Failed to retrieve session"))
+                                .verify();
 
-        verify(redisTemplate).opsForValue().delete(sessionId);
-    }
+                verify(valueOperations, times(1)).get(sessionId);
+        }
 
-    @Test
-    void deleteSession_nullSessionId() {
-        Mono<Boolean> result = sessionRepository.deleteSession(null);
+        @Test
+        void getSessionAccessToken_InvalidSessionId() {
+                StepVerifier.create(sessionRepository.getSessionAccessToken(null))
+                                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
+                                                && throwable.getMessage().equals("Session ID must not be null"))
+                                .verify();
+        }
 
-        StepVerifier.create(result)
-                .expectError(IllegalArgumentException.class)
-                .verify();
-    }
+        @Test
+        void deleteSession_Success() {
+                String sessionId = "testSessionId";
 
-    @Test
-    void validateSession_success() {
-        String sessionId = "mockSessionId";
-        String accessToken = "mockAccessToken";
+                when(valueOperations.delete(sessionId)).thenReturn(Mono.just(true));
 
-        when(redisTemplate.opsForValue().get(sessionId)).thenReturn(Mono.just(accessToken));
+                StepVerifier.create(sessionRepository.deleteSession(sessionId))
+                                .expectNext(true)
+                                .verifyComplete();
 
-        Mono<Boolean> result = sessionRepository.validateSession(sessionId, accessToken);
+                verify(valueOperations, times(1)).delete(sessionId);
+        }
 
-        StepVerifier.create(result)
-                .expectNext(true)
-                .verifyComplete();
+        @Test
+        void deleteSession_Error() {
+                String sessionId = "testSessionId";
 
-        verify(redisTemplate).opsForValue().get(sessionId);
-    }
+                when(valueOperations.delete(sessionId)).thenReturn(Mono.error(new RuntimeException("Redis error")));
 
-    @Test
-    void validateSession_invalidToken() {
-        String sessionId = "mockSessionId";
-        String accessToken = "mockAccessToken";
-        String savedToken = "anotherToken";
+                StepVerifier.create(sessionRepository.deleteSession(sessionId))
+                                .expectErrorMatches(throwable -> throwable instanceof RuntimeException
+                                                && throwable.getMessage().equals("Failed to delete session"))
+                                .verify();
 
-        when(redisTemplate.opsForValue().get(sessionId)).thenReturn(Mono.just(savedToken));
+                verify(valueOperations, times(1)).delete(sessionId);
+        }
 
-        Mono<Boolean> result = sessionRepository.validateSession(sessionId, accessToken);
+        @Test
+        void deleteSession_InvalidSessionId() {
+                StepVerifier.create(sessionRepository.deleteSession(null))
+                                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
+                                                && throwable.getMessage().equals("Session ID must not be null"))
+                                .verify();
+        }
 
-        StepVerifier.create(result)
-                .expectNext(false)
-                .verifyComplete();
-    }
+        @Test
+        void validateSession_Success() {
+                String sessionId = "testSessionId";
+                String accessToken = "testAccessToken";
 
-    @Test
-    void validateSession_nullSessionId() {
-        Mono<Boolean> result = sessionRepository.validateSession(null, "mockAccessToken");
+                when(valueOperations.get(sessionId)).thenReturn(Mono.just(accessToken));
 
-        StepVerifier.create(result)
-                .expectError(IllegalArgumentException.class)
-                .verify();
-    }
+                StepVerifier.create(sessionRepository.validateSession(sessionId, accessToken))
+                                .expectNext(true)
+                                .verifyComplete();
 
+                verify(valueOperations, times(1)).get(sessionId);
+        }
+
+        @Test
+        void validateSession_InvalidToken() {
+                String sessionId = "testSessionId";
+                String accessToken = "testAccessToken";
+                String wrongToken = "wrongAccessToken";
+
+                when(valueOperations.get(sessionId)).thenReturn(Mono.just(wrongToken));
+
+                StepVerifier.create(sessionRepository.validateSession(sessionId, accessToken))
+                                .expectNext(false)
+                                .verifyComplete();
+
+                verify(valueOperations, times(1)).get(sessionId);
+        }
+
+        @Test
+        void validateSession_Error() {
+                String sessionId = "testSessionId";
+                String accessToken = "testAccessToken";
+
+                when(valueOperations.get(sessionId)).thenReturn(Mono.error(new RuntimeException("Redis error")));
+
+                StepVerifier.create(sessionRepository.validateSession(sessionId, accessToken))
+                                .expectErrorMatches(throwable -> throwable instanceof RuntimeException
+                                                && throwable.getMessage().equals("Failed to validate session"))
+                                .verify();
+
+                verify(valueOperations, times(1)).get(sessionId);
+        }
 }

@@ -139,7 +139,7 @@ public class AuthController {
         return Mono.just(ProtoResponse.newBuilder()
                 .setStatusCode(statusCode)
                 .setMessage(message)
-                .addAllErrors(errors)
+                .addAllErrors(errors != null ? errors : List.of())
                 .build());
     }
 }

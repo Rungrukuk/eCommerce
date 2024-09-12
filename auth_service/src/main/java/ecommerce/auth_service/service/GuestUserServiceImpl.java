@@ -12,7 +12,7 @@ import ecommerce.auth_service.util.Roles;
 import reactor.core.publisher.Mono;
 
 @Service
-public class GuestUserServiceImpl {
+public class GuestUserServiceImpl implements GuestUserService {
 
     @Autowired
     private JwtTokenProvider tokenProvider;
@@ -24,6 +24,7 @@ public class GuestUserServiceImpl {
     private SessionRepository sessionRepository;
 
     // TODO Research Reactive Redis transactional operations
+    @Override
     public Mono<GuestUserResponse> createGuestUser() {
         GuestUserResponse userResponse = new GuestUserResponse();
         return guestUserRepository.saveGuestUser(Roles.GUEST_USER.name())
