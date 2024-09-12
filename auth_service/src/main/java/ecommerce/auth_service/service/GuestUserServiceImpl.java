@@ -23,7 +23,7 @@ public class GuestUserServiceImpl implements GuestUserService {
     @Autowired
     private SessionRepository sessionRepository;
 
-    // TODO Research Reactive Redis transactional operations
+
     @Override
     public Mono<GuestUserResponse> createGuestUser() {
         GuestUserResponse userResponse = new GuestUserResponse();

@@ -14,6 +14,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Session implements Serializable {
     @Id
-    private String sessionId;
     private String accessToken;
+    private String sessionId;
 }

@@ -137,7 +137,7 @@ public class JwtTokenProvider {
             return true;
         } catch (Exception e) {
             System.err.println("Token validation failed: " + e.getMessage());
-            // TODO handle the token expiration
+            // TODO handle error gracefully
             e.printStackTrace();
             return false;
         }

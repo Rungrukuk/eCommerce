@@ -77,17 +77,18 @@ public class UserServiceImpl implements UserService {
                                                         UserResponse userResponse = new UserResponse();
                                                         userResponse.setAccessToken(accessToken);
                                                         userResponse.setRefreshToken(refreshToken);
-                                                        userResponse
-                                                                .setSessionId(savedSession.getSessionId());
+                                                        userResponse.setSessionId(savedSession.getSessionId());
                                                         userResponse.setErrors(errors);
                                                         return userResponse;
+                                                    })
+                                                    .doOnError(e -> {
+                                                        sessionRepository.deleteSession(accessToken).subscribe();
                                                     });
                                         });
                             });
                 })
                 .as(transactionalOperator::transactional)
                 .onErrorResume(e -> {
-                    // TODO Handle Transaction correctly
                     UserResponse errorResponse = new UserResponse();
                     errorResponse.setErrors(List.of(e.getMessage()));
                     return Mono.just(errorResponse);

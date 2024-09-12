@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ecommerce.auth_service.dto.AuthResponse;
+import ecommerce.auth_service.repository.RefreshTokenRepository;
 import ecommerce.auth_service.repository.SessionRepository;
 import ecommerce.auth_service.security.JwtTokenProvider;
 import ecommerce.auth_service.util.CustomResponseStatus;
@@ -16,7 +17,7 @@ import reactor.core.publisher.Mono;
 public class AuthServiceImpl implements AuthService {
 
     @Autowired
-    private SessionRepository sessionRepo;
+    private SessionRepository sessionRepository;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -24,8 +25,10 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private GuestUserServiceImpl guestUserService;
 
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
     @Override
-    // TODO Do not forget to delete expired sessions or refresh tokens
     public Mono<AuthResponse> validate(Map<String, String> metadata) {
         String accessToken = metadata.get("accessToken");
         String refreshToken = metadata.get("refreshToken");
@@ -49,9 +52,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Mono<Boolean> validateAccessTokenAndSession(String accessToken, String sessionId) {
-        return Mono.justOrEmpty(accessToken)
+        if (accessToken == null || sessionId == null) {
+            return Mono.error(new IllegalArgumentException("Access token and session ID must not be null"));
+        }
+        return Mono.just(accessToken)
                 .filter(jwtTokenProvider::validateAccessToken)
-                .flatMap(token -> sessionRepo.validateSession(sessionId, accessToken))
+                .flatMap(validToken -> sessionRepository.validateSession(sessionId, accessToken)
+                        .flatMap(isValidSession -> {
+                            if (!isValidSession) {
+                                return sessionRepository.deleteSession(accessToken)
+                                        .then(sessionRepository.deleteBySessionId(sessionId))
+                                        .then(Mono.just(false));
+                            }
+                            return Mono.just(true);
+                        })
+                        .onErrorResume(e -> {
+                            return sessionRepository.deleteSession(accessToken)
+                                    .then(sessionRepository.deleteBySessionId(sessionId))
+                                    .then(Mono.error(new RuntimeException("Failed to validate or delete session", e)));
+                        }))
                 .defaultIfEmpty(false);
     }
 
@@ -70,6 +89,16 @@ public class AuthServiceImpl implements AuthService {
 
     private Mono<AuthResponse> handleInvalidAccessToken(String accessToken, String refreshToken) {
         if (!jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            refreshTokenRepository.deleteByRefreshToken(refreshToken)
+                    .onErrorResume(e -> {
+                        System.err.println("Error occurred while deleting refresh token: " + e.getMessage());
+                        return Mono.empty();
+                    })
+                    .subscribe(
+                            // TODO handle logging
+                            unused -> System.out.println("Invalid refresh token deleted successfully"),
+                            error -> System.err.println("Failed to delete refresh token: " + error.getMessage()));
+
             return createUnauthorizedAccessResponse();
         }
 
@@ -81,8 +110,8 @@ public class AuthServiceImpl implements AuthService {
         String serviceToken = jwtTokenProvider.createServiceToken(claims.getSubject(),
                 claims.get("role", String.class), "SERVICE");
 
-        // TODO Make sure to send asynchornoues log about session expired
-        return sessionRepo.saveSession(accessToken)
+        // TODO Make sure to send asynchronous log about session expired
+        return sessionRepository.saveSession(accessToken)
                 .map(savedSession -> {
                     AuthResponse response = new AuthResponse();
                     response.setAccessToken(newAccessToken);
@@ -95,13 +124,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Mono<AuthResponse> createUnauthorizedAccessResponse() {
-        return guestUserService.createGuestUser().flatMap(
+        return guestUserService.createGuestUser().map(
                 guestUserResponse -> {
                     AuthResponse response = new AuthResponse();
                     response.setAccessToken(guestUserResponse.getAccessToken());
                     response.setSessionId(guestUserResponse.getSessionId());
                     response.setResponseStatus(CustomResponseStatus.UNAUTHORIZED_USER);
-                    return Mono.just(response);
+                    return response;
                 });
 
     }

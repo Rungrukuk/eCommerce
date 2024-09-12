@@ -70,7 +70,7 @@ class SessionRepositoryTest {
 
                 when(valueOperations.get(sessionId)).thenReturn(Mono.just(accessToken));
 
-                StepVerifier.create(sessionRepository.getSessionAccessToken(sessionId))
+                StepVerifier.create(sessionRepository.getSession(sessionId))
                                 .expectNext(accessToken)
                                 .verifyComplete();
 
@@ -83,7 +83,7 @@ class SessionRepositoryTest {
 
                 when(valueOperations.get(sessionId)).thenReturn(Mono.error(new RuntimeException("Redis error")));
 
-                StepVerifier.create(sessionRepository.getSessionAccessToken(sessionId))
+                StepVerifier.create(sessionRepository.getSession(sessionId))
                                 .expectErrorMatches(throwable -> throwable instanceof RuntimeException
                                                 && throwable.getMessage().equals("Failed to retrieve session"))
                                 .verify();
@@ -93,7 +93,7 @@ class SessionRepositoryTest {
 
         @Test
         void getSessionAccessToken_InvalidSessionId() {
-                StepVerifier.create(sessionRepository.getSessionAccessToken(null))
+                StepVerifier.create(sessionRepository.getSession(null))
                                 .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
                                                 && throwable.getMessage().equals("Session ID must not be null"))
                                 .verify();
