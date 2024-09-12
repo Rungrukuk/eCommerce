@@ -82,7 +82,7 @@ public class UserServiceImpl implements UserService {
                                                         return userResponse;
                                                     })
                                                     .doOnError(e -> {
-                                                        sessionRepository.deleteSession(accessToken).subscribe();
+                                                        sessionRepository.deleteByAccessToken(accessToken).subscribe();
                                                     });
                                         });
                             });

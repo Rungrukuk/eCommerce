@@ -13,6 +13,7 @@ import reactor.test.StepVerifier;
 import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -37,7 +38,7 @@ class SessionRepositoryTest {
         void saveSession_Success() {
                 String accessToken = "testAccessToken";
 
-                when(valueOperations.set(anyString(), eq(accessToken), eq(Duration.ofHours(24))))
+                when(valueOperations.set(eq(accessToken), anyString(), eq(Duration.ofHours(24))))
                                 .thenReturn(Mono.just(true));
 
                 StepVerifier.create(sessionRepository.saveSession(accessToken))
@@ -45,14 +46,14 @@ class SessionRepositoryTest {
                                                 && savedSession.getSessionId() != null)
                                 .verifyComplete();
 
-                verify(valueOperations, times(1)).set(any(String.class), eq(accessToken), eq(Duration.ofHours(24)));
+                verify(valueOperations, times(1)).set(eq(accessToken), any(String.class), eq(Duration.ofHours(24)));
         }
 
         @Test
         void saveSession_Error() {
                 String accessToken = "testAccessToken";
 
-                when(valueOperations.set(any(String.class), eq(accessToken), eq(Duration.ofHours(24))))
+                when(valueOperations.set(eq(accessToken), any(String.class), eq(Duration.ofHours(24))))
                                 .thenReturn(Mono.error(new RuntimeException("Redis error")));
 
                 StepVerifier.create(sessionRepository.saveSession(accessToken))
@@ -60,7 +61,7 @@ class SessionRepositoryTest {
                                                 && throwable.getMessage().equals("Failed to save session"))
                                 .verify();
 
-                verify(valueOperations, times(1)).set(any(String.class), eq(accessToken), eq(Duration.ofHours(24)));
+                verify(valueOperations, times(1)).set(eq(accessToken), any(String.class), eq(Duration.ofHours(24)));
         }
 
         @Test
@@ -92,10 +93,9 @@ class SessionRepositoryTest {
         }
 
         @Test
-        void getSessionAccessToken_InvalidSessionId() {
+        void getSession_InvalidSessionId() {
                 StepVerifier.create(sessionRepository.getSession(null))
-                                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
-                                                && throwable.getMessage().equals("Session ID must not be null"))
+                                .expectComplete()
                                 .verify();
         }
 
@@ -105,7 +105,7 @@ class SessionRepositoryTest {
 
                 when(valueOperations.delete(sessionId)).thenReturn(Mono.just(true));
 
-                StepVerifier.create(sessionRepository.deleteSession(sessionId))
+                StepVerifier.create(sessionRepository.deleteByAccessToken(sessionId))
                                 .expectNext(true)
                                 .verifyComplete();
 
@@ -118,7 +118,7 @@ class SessionRepositoryTest {
 
                 when(valueOperations.delete(sessionId)).thenReturn(Mono.error(new RuntimeException("Redis error")));
 
-                StepVerifier.create(sessionRepository.deleteSession(sessionId))
+                StepVerifier.create(sessionRepository.deleteByAccessToken(sessionId))
                                 .expectErrorMatches(throwable -> throwable instanceof RuntimeException
                                                 && throwable.getMessage().equals("Failed to delete session"))
                                 .verify();
@@ -128,10 +128,9 @@ class SessionRepositoryTest {
 
         @Test
         void deleteSession_InvalidSessionId() {
-                StepVerifier.create(sessionRepository.deleteSession(null))
-                                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
-                                                && throwable.getMessage().equals("Session ID must not be null"))
-                                .verify();
+                StepVerifier.create(sessionRepository.deleteByAccessToken(null))
+                                .expectNext(true)
+                                .verifyComplete();
         }
 
         @Test
@@ -139,28 +138,28 @@ class SessionRepositoryTest {
                 String sessionId = "testSessionId";
                 String accessToken = "testAccessToken";
 
-                when(valueOperations.get(sessionId)).thenReturn(Mono.just(accessToken));
+                when(valueOperations.get(accessToken)).thenReturn(Mono.just(sessionId));
 
-                StepVerifier.create(sessionRepository.validateSession(sessionId, accessToken))
+                StepVerifier.create(sessionRepository.validateSession(accessToken, sessionId))
                                 .expectNext(true)
                                 .verifyComplete();
 
-                verify(valueOperations, times(1)).get(sessionId);
+                verify(valueOperations, times(1)).get(accessToken);
         }
 
         @Test
         void validateSession_InvalidToken() {
                 String sessionId = "testSessionId";
+                String wrongSessionId = "wrongSessionId";
                 String accessToken = "testAccessToken";
-                String wrongToken = "wrongAccessToken";
 
-                when(valueOperations.get(sessionId)).thenReturn(Mono.just(wrongToken));
+                when(valueOperations.get(accessToken)).thenReturn(Mono.just(wrongSessionId));
 
-                StepVerifier.create(sessionRepository.validateSession(sessionId, accessToken))
+                StepVerifier.create(sessionRepository.validateSession(accessToken, sessionId))
                                 .expectNext(false)
                                 .verifyComplete();
 
-                verify(valueOperations, times(1)).get(sessionId);
+                verify(valueOperations, times(1)).get(accessToken);
         }
 
         @Test
@@ -168,13 +167,13 @@ class SessionRepositoryTest {
                 String sessionId = "testSessionId";
                 String accessToken = "testAccessToken";
 
-                when(valueOperations.get(sessionId)).thenReturn(Mono.error(new RuntimeException("Redis error")));
+                when(valueOperations.get(accessToken)).thenReturn(Mono.error(new RuntimeException("Redis error")));
 
-                StepVerifier.create(sessionRepository.validateSession(sessionId, accessToken))
+                StepVerifier.create(sessionRepository.validateSession(accessToken, sessionId))
                                 .expectErrorMatches(throwable -> throwable instanceof RuntimeException
                                                 && throwable.getMessage().equals("Failed to validate session"))
                                 .verify();
 
-                verify(valueOperations, times(1)).get(sessionId);
+                verify(valueOperations, times(1)).get(accessToken);
         }
 }

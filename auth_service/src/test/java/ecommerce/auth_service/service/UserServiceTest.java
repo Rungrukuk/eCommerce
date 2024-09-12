@@ -86,7 +86,7 @@ class UserServiceTest {
                                 .thenReturn(Mono.just(new RefreshToken(userId, refreshToken)));
 
                 when(sessionRepository.saveSession(accessToken))
-                                .thenReturn(Mono.just(new Session("mockSessionId", accessToken)));
+                                .thenReturn(Mono.just(new Session(accessToken, "mockSessionId")));
 
                 Mono<UserResponse> result = userService.createUser(userCreateDTO);
 

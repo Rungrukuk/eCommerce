@@ -14,33 +14,40 @@ import java.util.UUID;
 public class SessionRepository {
 
     @Autowired
+    //TODO might need to refactor the code for .then
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
     public Mono<Session> saveSession(String accessToken) {
+        if (accessToken == null || accessToken.isEmpty()) {
+            return Mono.empty();
+        }
         String sessionId = UUID.randomUUID().toString();
-        Session session = new Session(sessionId, accessToken);
+        Session session = new Session(accessToken, sessionId);
         return redisTemplate.opsForValue().set(accessToken, sessionId, Duration.ofHours(24))
                 .then(Mono.just(session))
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to save session", e)));
     }
 
     public Mono<String> getSession(String accessToken) {
-        if (accessToken == null) {
-            return Mono.error(new IllegalArgumentException("Session ID must not be null"));
+        if (accessToken == null || accessToken.isEmpty()) {
+            return Mono.empty();
         }
         return redisTemplate.opsForValue().get(accessToken)
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to retrieve session", e)));
     }
 
-    public Mono<Boolean> deleteSession(String accessToken) {
-        if (accessToken == null) {
-            return Mono.error(new IllegalArgumentException("Session ID must not be null"));
+    public Mono<Boolean> deleteByAccessToken(String accessToken) {
+        if (accessToken == null || accessToken.isEmpty()) {
+            return Mono.just(true);
         }
         return redisTemplate.opsForValue().delete(accessToken)
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to delete session", e)));
     }
 
-    public Mono<Boolean> validateSession(String sessionId, String accessToken) {
+    public Mono<Boolean> validateSession(String accessToken, String sessionId) {
+        if (accessToken == null || sessionId == null || accessToken.isEmpty() || sessionId.isEmpty()) {
+            return Mono.just(false);
+        }
         return redisTemplate.opsForValue().get(accessToken)
                 .map(savedSession -> sessionId.equals(savedSession))
                 .defaultIfEmpty(false)
@@ -48,8 +55,8 @@ public class SessionRepository {
     }
 
     public Mono<Boolean> deleteBySessionId(String sessionId) {
-        if (sessionId == null) {
-            return Mono.error(new IllegalArgumentException("Session ID must not be null"));
+        if (sessionId == null || sessionId.isEmpty()) {
+            return Mono.just(true);
         }
         return redisTemplate.keys("*")
                 .flatMap(key -> redisTemplate.opsForValue().get(key)

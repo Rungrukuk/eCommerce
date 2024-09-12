@@ -51,27 +51,28 @@ public class AuthServiceImpl implements AuthService {
 
     }
 
+    // TODO search any method checks for null or empty when uses sessionRepo,
+    // guestUserRepo, or validateAccessToken
     private Mono<Boolean> validateAccessTokenAndSession(String accessToken, String sessionId) {
-        if (accessToken == null || sessionId == null) {
-            return Mono.error(new IllegalArgumentException("Access token and session ID must not be null"));
-        }
         return Mono.just(accessToken)
                 .filter(jwtTokenProvider::validateAccessToken)
                 .flatMap(validToken -> sessionRepository.validateSession(sessionId, accessToken)
                         .flatMap(isValidSession -> {
                             if (!isValidSession) {
-                                return sessionRepository.deleteSession(accessToken)
-                                        .then(sessionRepository.deleteBySessionId(sessionId))
-                                        .then(Mono.just(false));
+                                return Mono.fromRunnable(() -> {
+                                    sessionRepository.deleteByAccessToken(accessToken).subscribe();
+                                    sessionRepository.deleteBySessionId(sessionId).subscribe();
+                                }).then(Mono.just(false));
                             }
                             return Mono.just(true);
-                        })
-                        .onErrorResume(e -> {
-                            return sessionRepository.deleteSession(accessToken)
-                                    .then(sessionRepository.deleteBySessionId(sessionId))
-                                    .then(Mono.error(new RuntimeException("Failed to validate or delete session", e)));
                         }))
-                .defaultIfEmpty(false);
+                .switchIfEmpty(
+                        Mono.fromRunnable(() -> sessionRepository.deleteBySessionId(sessionId).subscribe())
+                                .then(Mono.just(false)))
+                .onErrorResume(e -> {
+                    return Mono.error(new RuntimeException("Failed to validate or delete session", e));
+                });
+
     }
 
     private Mono<AuthResponse> handleValidAccessToken(String accessToken, String sessionId) {
@@ -87,17 +88,15 @@ public class AuthServiceImpl implements AuthService {
         return Mono.just(response);
     }
 
+    // TODO Might need to refactor this
     private Mono<AuthResponse> handleInvalidAccessToken(String accessToken, String refreshToken) {
         if (!jwtTokenProvider.validateRefreshToken(refreshToken)) {
             refreshTokenRepository.deleteByRefreshToken(refreshToken)
-                    .onErrorResume(e -> {
-                        System.err.println("Error occurred while deleting refresh token: " + e.getMessage());
-                        return Mono.empty();
-                    })
-                    .subscribe(
-                            // TODO handle logging
-                            unused -> System.out.println("Invalid refresh token deleted successfully"),
-                            error -> System.err.println("Failed to delete refresh token: " + error.getMessage()));
+                    .doOnNext(isDeleted -> System.out.println("Invalid refresh token deleted: " + isDeleted))
+                    .doOnError(
+                            // TODO Handle Logging the error
+                            e -> System.err.println("Error occurred while deleting refresh token: " + e.getMessage()))
+                    .subscribe();
 
             return createUnauthorizedAccessResponse();
         }

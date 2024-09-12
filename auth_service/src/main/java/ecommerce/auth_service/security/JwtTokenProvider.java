@@ -128,6 +128,9 @@ public class JwtTokenProvider {
     }
 
     private boolean validateToken(String token, PublicKey publicKey) {
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
         try {
             JwtParser jwtParser = Jwts.parserBuilder()
                     .setSigningKey(publicKey)

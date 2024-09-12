@@ -12,6 +12,7 @@ import java.util.UUID;
 
 @Repository
 // TODO Instead of storing role, store user agent data
+// TODO might need to refactor the code for .then
 public class GuestUserRepository {
 
     @Autowired
