@@ -84,10 +84,11 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String createServiceToken(String userId, String roleName, String audience) {
+    public String createServiceToken(String userId, String roleName, String audience, String destination) {
         Claims claims = Jwts.claims().setSubject(userId);
         claims.put("role", roleName);
         claims.setAudience(audience);
+        claims.put("destination", destination);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + serviceTokenExpiration);

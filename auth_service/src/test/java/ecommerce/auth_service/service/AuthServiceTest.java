@@ -64,7 +64,7 @@ public class AuthServiceTest {
         Mono<AuthResponse> responseMono = authService.validate(metadata);
         AuthResponse response = responseMono.block();
 
-        assertEquals(CustomResponseStatus.AUTHORIZED_USER, response.getResponseStatus());
+        assertEquals(CustomResponseStatus.AUTHORIZED_GUEST_USER, response.getResponseStatus());
         assertEquals(accessToken, response.getAccessToken());
         assertEquals(sessionId, response.getSessionId());
         assertEquals("serviceToken", response.getServiceToken());
@@ -97,7 +97,7 @@ public class AuthServiceTest {
         Mono<AuthResponse> responseMono = authService.validate(metadata);
         AuthResponse response = responseMono.block();
 
-        assertEquals(CustomResponseStatus.SESSION_EXPIRED_CREATED_NEW_SESSION, response.getResponseStatus());
+        assertEquals(CustomResponseStatus.AUTHORIZED_USER, response.getResponseStatus());
         assertEquals("newAccessToken", response.getAccessToken());
         assertEquals("newRefreshToken", response.getRefreshToken());
         assertEquals("newServiceToken", response.getServiceToken());

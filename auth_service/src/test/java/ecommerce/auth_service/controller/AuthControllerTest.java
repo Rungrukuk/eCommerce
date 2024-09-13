@@ -49,7 +49,7 @@ class AuthControllerTest {
                                 .build();
 
                 AuthResponse authResponse = new AuthResponse();
-                authResponse.setResponseStatus(CustomResponseStatus.AUTHORIZED_USER);
+                authResponse.setResponseStatus(CustomResponseStatus.AUTHORIZED_GUEST_USER);
                 when(authService.validate(metadata)).thenReturn(Mono.just(authResponse));
 
                 UserResponse userResponse = new UserResponse();
@@ -103,7 +103,7 @@ class AuthControllerTest {
                                 .build();
 
                 AuthResponse authResponse = new AuthResponse();
-                authResponse.setResponseStatus(CustomResponseStatus.SESSION_EXPIRED_CREATED_NEW_SESSION);
+                authResponse.setResponseStatus(CustomResponseStatus.AUTHORIZED_USER);
                 authResponse.setAccessToken("newAccessToken");
                 authResponse.setSessionId("newSessionId");
                 authResponse.setRefreshToken("newRefreshToken");
@@ -142,7 +142,7 @@ class AuthControllerTest {
         void testValidateAndIssueNewToken_AuthorizedUser() {
                 Map<String, String> metadata = new HashMap<>();
                 AuthResponse authResponse = new AuthResponse();
-                authResponse.setResponseStatus(CustomResponseStatus.AUTHORIZED_USER);
+                authResponse.setResponseStatus(CustomResponseStatus.AUTHORIZED_GUEST_USER);
                 authResponse.setAccessToken("testAccessToken");
                 authResponse.setSessionId("testSessionId");
                 authResponse.setServiceToken("testServiceToken");
@@ -164,7 +164,7 @@ class AuthControllerTest {
         void testValidateAndIssueNewToken_SessionExpired_CreatesNewSession() {
                 Map<String, String> metadata = new HashMap<>();
                 AuthResponse authResponse = new AuthResponse();
-                authResponse.setResponseStatus(CustomResponseStatus.SESSION_EXPIRED_CREATED_NEW_SESSION);
+                authResponse.setResponseStatus(CustomResponseStatus.AUTHORIZED_USER);
                 authResponse.setAccessToken("testAccessToken");
                 authResponse.setSessionId("testSessionId");
                 authResponse.setServiceToken("testServiceToken");

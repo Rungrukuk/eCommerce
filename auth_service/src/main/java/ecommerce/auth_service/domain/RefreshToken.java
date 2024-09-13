@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("RefreshTokens")
+@Table("refresh_tokens")
 public class RefreshToken {
     @Id
     private String userId;

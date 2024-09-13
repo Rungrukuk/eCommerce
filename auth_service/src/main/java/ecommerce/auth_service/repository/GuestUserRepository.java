@@ -12,13 +12,15 @@ import java.util.UUID;
 
 @Repository
 // TODO Instead of storing role, store user agent data
-// TODO might need to refactor the code for .then
 public class GuestUserRepository {
 
     @Autowired
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
     public Mono<UserDTO> saveGuestUser(String roleName) {
+        if (roleName == null || roleName.isEmpty()) {
+            return Mono.empty();
+        }
         String userId = UUID.randomUUID().toString();
         UserDTO guestUser = new UserDTO();
         guestUser.setRoleName(roleName);
@@ -27,16 +29,25 @@ public class GuestUserRepository {
     }
 
     public Mono<String> getGuestUserRole(String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return Mono.empty();
+        }
         return redisTemplate.opsForValue().get(userId)
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to retrieve guest user role", e)));
     }
 
     public Mono<Boolean> deleteGuestUser(String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return Mono.just(true);
+        }
         return redisTemplate.opsForValue().delete(userId)
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to delete guest user", e)));
     }
 
     public Mono<Boolean> validateGuestUser(String userId, String roleName) {
+        if (userId == null || roleName == null || userId.isEmpty() || roleName.isEmpty()) {
+            return Mono.just(false);
+        }
         return redisTemplate.opsForValue().get(userId)
                 .map(savedRole -> savedRole.equals(roleName))
                 .defaultIfEmpty(false)

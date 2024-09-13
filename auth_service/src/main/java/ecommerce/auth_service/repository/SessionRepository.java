@@ -11,10 +11,10 @@ import java.time.Duration;
 import java.util.UUID;
 
 @Repository
+// TODO encrypt the data before saving it in Redis
 public class SessionRepository {
 
     @Autowired
-    //TODO might need to refactor the code for .then
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
     public Mono<Session> saveSession(String accessToken) {

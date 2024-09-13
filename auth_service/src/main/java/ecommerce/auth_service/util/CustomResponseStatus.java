@@ -1,20 +1,29 @@
 package ecommerce.auth_service.util;
 
+// TODO consider sending these responses to api gateway
 public enum CustomResponseStatus {
     /**
-     * When access token or session id is wrong but refresh token is correct,
-     * created new guest user with new session and token
+     * When user is authenticated and has permissions for the given resources
      */
-    SESSION_EXPIRED_CREATED_NEW_SESSION,
+    AUTHORIZED_USER,
     /**
-     * When access token or session id is wrong and there are no refresh token,
-     * created new guest user with new session and token
+     * When user is unauthenticated but has permissions for the given resources
+     */
+    AUTHORIZED_GUEST_USER,
+    /**
+     * When user has no access to the given resources, but authenticated
      */
     UNAUTHORIZED_USER,
     /**
-     * When access token and session id is correct
+     * When user has no access to the given resources, and unauthenticated with
+     * valid session and access token
      */
-    AUTHORIZED_USER,
+    UNAUTHORIZED_GUEST_USER,
+    /**
+     * When user has no access to the given resources, and unauthenticated with
+     * invalid session and access token. Created new session and access token
+     */
+    UNAUTHENTICATED_GUEST_USER,
     /**
      * When unexpected error occurs
      */

@@ -8,11 +8,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Table("Permissions")
+@Table("permissions")
 @NoArgsConstructor
 @AllArgsConstructor
 public class Permission {
     @Id
     private Long id;
-    private String name;
+    private String audience;
+    private String destination;
 }

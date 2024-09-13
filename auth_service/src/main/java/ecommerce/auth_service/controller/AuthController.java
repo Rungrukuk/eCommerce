@@ -24,16 +24,13 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-    // TODO handle authenticated user's(logged in user) registration
-    // TODO RBAC
+    // TODO Add email already been registered response
+    // TODO Refactor the registerUser
     @MessageMapping("registerUser")
     public Mono<ProtoResponse> registerUser(@Headers Map<String, String> metadata, ProtoRequest request) {
         return authService.validate(metadata)
                 .flatMap(authResponse -> switch (authResponse.getResponseStatus()) {
-                    // Check if there are any need for creating new service token
-                    // TODO Instead of creating service token new user created event can be
-                    // published
-                    case CustomResponseStatus.AUTHORIZED_USER ->
+                    case CustomResponseStatus.AUTHORIZED_GUEST_USER ->
                         handleUserCreation(
                                 new UserCreateDTO(
                                         request.getDataOrDefault("email", ""),
@@ -45,19 +42,10 @@ public class AuthController {
                                 authResponse.getAccessToken(),
                                 authResponse.getSessionId());
 
-                    case CustomResponseStatus.SESSION_EXPIRED_CREATED_NEW_SESSION ->
-                        buildResponseWithTokens(
-                                authResponse.getAccessToken(),
-                                authResponse.getSessionId(),
-                                null,
-                                authResponse.getRefreshToken(),
-                                400,
-                                "Please log out, to create new user");
-
                     case CustomResponseStatus.UNEXPECTED_ERROR ->
                         errorResponse("Unexpected error occurred. Please try again", null, 500);
 
-                    default -> errorResponse("Unexpected error occurred. Please try again", null, 500);
+                    default -> errorResponse("Bad Request", null, 400);
 
                 })
                 .onErrorResume(e -> errorResponse("Unexpected error occurred. Please try again", null, 500));
@@ -67,7 +55,7 @@ public class AuthController {
     public Mono<ProtoResponse> validateAndIssueNewToken(@Headers Map<String, String> metadata) {
         return authService.validate(metadata)
                 .flatMap(authResponse -> switch (authResponse.getResponseStatus()) {
-                    case CustomResponseStatus.AUTHORIZED_USER ->
+                    case CustomResponseStatus.AUTHORIZED_GUEST_USER ->
                         buildResponseWithTokens(
                                 authResponse.getAccessToken(),
                                 authResponse.getSessionId(),
@@ -76,7 +64,7 @@ public class AuthController {
                                 200,
                                 "");
 
-                    case CustomResponseStatus.SESSION_EXPIRED_CREATED_NEW_SESSION ->
+                    case CustomResponseStatus.AUTHORIZED_USER ->
                         buildResponseWithTokens(
                                 authResponse.getAccessToken(),
                                 authResponse.getSessionId(),
@@ -102,6 +90,7 @@ public class AuthController {
     private Mono<ProtoResponse> handleUserCreation(UserCreateDTO userCreateDTO) {
         return userService.createUser(userCreateDTO)
                 .flatMap(userResponse -> userResponse.getErrors().isEmpty()
+                        // TODO New User Created event should be published
                         ? buildResponseWithTokens(
                                 userResponse.getAccessToken(),
                                 userResponse.getSessionId(),

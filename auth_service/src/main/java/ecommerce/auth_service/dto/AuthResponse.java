@@ -15,7 +15,7 @@ public class AuthResponse extends BaseResponse {
     private String refreshToken;
 
     public AuthResponse(String accessToken, String refreshToken, String sessionId,
-            CustomResponseStatus responseStatus, List<String> errors, String serviceToken) {
+            CustomResponseStatus responseStatus, List<String> errors, String serviceToken, String roleName) {
         super(accessToken, sessionId, responseStatus, errors);
         this.serviceToken = serviceToken;
         this.refreshToken = refreshToken;
