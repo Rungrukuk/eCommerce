@@ -13,11 +13,13 @@ import lombok.NoArgsConstructor;
 public class UserResponse extends BaseResponse {
 
     private String refreshToken;
-
+    private List<String> errors;
+    private String email;
 
     public UserResponse(String accessToken, String refreshToken, String sessionId, CustomResponseStatus responseStatus,
             List<String> errors) {
-        super(accessToken, sessionId, responseStatus, errors);
+        super(accessToken, sessionId, responseStatus);
         this.refreshToken = refreshToken;
+        this.errors = errors;
     }
 }

@@ -10,3 +10,8 @@ message ProtoResponse {
     int32 statusCode = 4;
     repeated string errors = 5;
 }
+
+message ProtoAuthResponse{
+    string message = 1;
+    map<string, string> metadata = 2;
+}

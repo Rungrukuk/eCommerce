@@ -6,8 +6,6 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
-import ecommerce.auth_service.dto.UserCreateDTO;
-
 @Component
 public class InputValidator {
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
@@ -36,13 +34,13 @@ public class InputValidator {
                 && SPECIAL_CHAR_PATTERN.matcher(password).find();
     }
 
-    public List<String> validateData(UserCreateDTO userCreateDTO) {
+    public List<String> validateData(String email, String password, String rePassword) {
         List<String> errors = new ArrayList<>();
-        if (!isValidEmail(userCreateDTO.getEmail())) {
+        if (!isValidEmail(email)) {
             errors.add("Email is not valid!");
         }
 
-        if (!isStrongPassword(userCreateDTO.getPassword())) {
+        if (!isStrongPassword(password)) {
             errors.add("""
                         Password is not strong enough.
                         Ensure it has at least 1 uppercase letter, 1 lowercase letter,
@@ -50,7 +48,7 @@ public class InputValidator {
                     """);
         }
 
-        if (userCreateDTO.getPassword() != userCreateDTO.getRePassword()) {
+        if (!password.equals(rePassword)) {
             errors.add("Passwords do not match.");
         }
         return errors;

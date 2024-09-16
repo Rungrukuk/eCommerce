@@ -10,8 +10,11 @@ import java.util.List;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class GuestUserResponse extends BaseResponse {
+    private List<String> errors;
+
     public GuestUserResponse(String accessToken, String sessionId,
             CustomResponseStatus responseStatus, List<String> errors) {
-        super(accessToken, sessionId, responseStatus, errors);
+        super(accessToken, sessionId, responseStatus);
+        this.errors = errors;
     }
 }

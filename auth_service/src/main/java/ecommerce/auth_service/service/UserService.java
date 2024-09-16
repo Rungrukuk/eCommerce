@@ -1,12 +1,12 @@
 package ecommerce.auth_service.service;
 
-import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserDTO;
 import ecommerce.auth_service.dto.UserResponse;
 import reactor.core.publisher.Mono;
+import java.util.Map;
 
 public interface UserService {
-    Mono<UserResponse> createUser(UserCreateDTO user);
+    Mono<UserResponse> createUser(Map<String, String> user);
 
     Mono<UserDTO> getUser(String userId);
 

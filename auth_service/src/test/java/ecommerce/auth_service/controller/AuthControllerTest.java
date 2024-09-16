@@ -1,7 +1,8 @@
 package ecommerce.auth_service.controller;
 
+import ecommerce.auth_service.ProtoRequest;
 import ecommerce.auth_service.ProtoResponse;
-import ecommerce.auth_service.RequestProto.ProtoRequest;
+import ecommerce.auth_service.RequestProto;
 import ecommerce.auth_service.dto.AuthResponse;
 import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.dto.UserResponse;

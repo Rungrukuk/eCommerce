@@ -1,7 +1,5 @@
 package ecommerce.auth_service.dto;
 
-import java.util.List;
-
 import ecommerce.auth_service.util.CustomResponseStatus;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -15,8 +13,8 @@ public class AuthResponse extends BaseResponse {
     private String refreshToken;
 
     public AuthResponse(String accessToken, String refreshToken, String sessionId,
-            CustomResponseStatus responseStatus, List<String> errors, String serviceToken, String roleName) {
-        super(accessToken, sessionId, responseStatus, errors);
+            CustomResponseStatus responseStatus, String serviceToken) {
+        super(accessToken, sessionId, responseStatus);
         this.serviceToken = serviceToken;
         this.refreshToken = refreshToken;
     }

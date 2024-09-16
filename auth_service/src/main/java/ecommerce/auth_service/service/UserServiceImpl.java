@@ -4,7 +4,6 @@ import ecommerce.auth_service.domain.RefreshToken;
 import ecommerce.auth_service.domain.User;
 import ecommerce.auth_service.dto.UserDTO;
 import ecommerce.auth_service.dto.UserResponse;
-import ecommerce.auth_service.dto.UserCreateDTO;
 import ecommerce.auth_service.repository.RefreshTokenRepository;
 import ecommerce.auth_service.repository.SessionRepository;
 import ecommerce.auth_service.repository.UserRepository;
@@ -13,6 +12,7 @@ import ecommerce.auth_service.security.JwtTokenProvider;
 import ecommerce.auth_service.util.Roles;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -45,8 +45,11 @@ public class UserServiceImpl implements UserService {
     private InputValidator validatorService;
 
     @Override
-    public Mono<UserResponse> createUser(UserCreateDTO userCreateDTO) {
-        return Mono.fromCallable(() -> validatorService.validateData(userCreateDTO))
+    public Mono<UserResponse> createUser(Map<String, String> data) {
+        String email = data.get("email");
+        String password = data.get("password");
+        String rePassword = data.get("rePassword");
+        return Mono.fromCallable(() -> validatorService.validateData(email, password, rePassword))
                 .flatMap(errors -> {
                     if (!errors.isEmpty()) {
                         UserResponse errorResponse = new UserResponse();
@@ -58,8 +61,8 @@ public class UserServiceImpl implements UserService {
                     String accessToken = tokenProvider.createAccessToken(userId, Roles.USER.name());
                     User user = new User(
                             userId,
-                            userCreateDTO.getEmail(),
-                            passwordEncoder.encode(userCreateDTO.getPassword()),
+                            email,
+                            passwordEncoder.encode(password),
                             Roles.USER.name());
 
                     return userRepository.save(user)
@@ -78,6 +81,7 @@ public class UserServiceImpl implements UserService {
                                                         userResponse.setAccessToken(accessToken);
                                                         userResponse.setRefreshToken(refreshToken);
                                                         userResponse.setSessionId(savedSession.getSessionId());
+                                                        userResponse.setEmail(email);
                                                         userResponse.setErrors(errors);
                                                         return userResponse;
                                                     })
