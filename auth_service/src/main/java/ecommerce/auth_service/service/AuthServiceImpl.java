@@ -46,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
 
         return validateAccessTokenAndSession(accessToken, sessionId)
                 .flatMap(isValid -> isValid
-                        ? handleValidAccessToken(accessToken, refreshToken, sessionId, audience, destination)
+                        ? handleValidAccessToken(accessToken, sessionId, refreshToken, audience, destination)
                         : handleInvalidAccessToken(refreshToken, audience, destination))
                 .onErrorResume(
                         e -> {
@@ -60,7 +60,9 @@ public class AuthServiceImpl implements AuthService {
     // TODO validate token functionality can be removed by handling the errors
     private Mono<Boolean> validateAccessTokenAndSession(String accessToken, String sessionId) {
         return Mono.just(accessToken)
-                .filter(jwtTokenProvider::validateAccessToken)
+                .filter(token -> {
+                    return jwtTokenProvider.validateAccessToken(token);
+                })
                 .flatMap(validToken -> sessionRepository.validateSession(sessionId, accessToken)
                         .flatMap(isValidSession -> {
                             if (!isValidSession) {

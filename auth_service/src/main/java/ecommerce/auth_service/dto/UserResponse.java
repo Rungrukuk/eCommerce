@@ -12,13 +12,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserResponse extends BaseResponse {
 
+    private String email;
     private String refreshToken;
     private List<String> errors;
-    private String email;
 
-    public UserResponse(String accessToken, String refreshToken, String sessionId, CustomResponseStatus responseStatus,
+    public UserResponse(String email, String accessToken, String sessionId, String refreshToken,
+            CustomResponseStatus responseStatus,
             List<String> errors) {
         super(accessToken, sessionId, responseStatus);
+        this.email = email;
         this.refreshToken = refreshToken;
         this.errors = errors;
     }

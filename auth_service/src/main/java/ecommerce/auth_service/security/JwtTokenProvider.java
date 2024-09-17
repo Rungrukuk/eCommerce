@@ -140,8 +140,8 @@ public class JwtTokenProvider {
             jwtParser.parseClaimsJws(token);
             return true;
         } catch (Exception e) {
-            System.err.println("Token validation failed: " + e.getMessage());
             // TODO handle error gracefully
+            System.err.println("Token validation failed: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

@@ -35,11 +35,12 @@ public class AuthController {
             return userService.createUser(request.getDataMap())
                     .flatMap(userResponse -> userResponse.getErrors().isEmpty()
                             // TODO New User Created event should be published
-                            ?
-                            Mono.just(ProtoResponse.newBuilder()
+                            ? Mono.just(ProtoResponse.newBuilder()
                                     .setStatusCode(201)
                                     .setMessage("User Created Successfully")
-                                    .putMetadata("serviceToken", metadata.get("serviceToken"))
+                                    .putMetadata("accessToken", userResponse.getAccessToken())
+                                    .putMetadata("sessionId", userResponse.getSessionId())
+                                    .putMetadata("refreshToken", userResponse.getRefreshToken())
                                     .putData("email", userResponse.getEmail())
                                     .build())
                             : errorResponse("Bad Request", userResponse.getErrors(), 400));

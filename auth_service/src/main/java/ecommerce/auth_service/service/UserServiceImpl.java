@@ -78,10 +78,10 @@ public class UserServiceImpl implements UserService {
                                                     .saveSession(accessToken)
                                                     .map(savedSession -> {
                                                         UserResponse userResponse = new UserResponse();
+                                                        userResponse.setEmail(email);
                                                         userResponse.setAccessToken(accessToken);
                                                         userResponse.setRefreshToken(refreshToken);
                                                         userResponse.setSessionId(savedSession.getSessionId());
-                                                        userResponse.setEmail(email);
                                                         userResponse.setErrors(errors);
                                                         return userResponse;
                                                     })
