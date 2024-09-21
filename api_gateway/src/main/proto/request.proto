@@ -1,0 +1,14 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "ecommerce.api_gateway";
+option java_outer_classname = "RequestProto";
+
+message  ProtoRequest{
+    map<string, string> data = 1;
+    map<string, string> metadata = 2;
+}
+
+message ProtoAuthRequest{
+    map<string, string> data = 1;
+    map<string, string> metadata = 2;
+}

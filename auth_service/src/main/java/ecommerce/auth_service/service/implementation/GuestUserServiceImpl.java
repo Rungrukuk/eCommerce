@@ -1,13 +1,13 @@
-package ecommerce.auth_service.service;
+package ecommerce.auth_service.service.implementation;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import ecommerce.auth_service.dto.GuestUserResponse;
+import ecommerce.auth_service.dto.BaseResponse;
 import ecommerce.auth_service.repository.GuestUserRepository;
 import ecommerce.auth_service.repository.SessionRepository;
 import ecommerce.auth_service.security.JwtTokenProvider;
-import ecommerce.auth_service.util.CustomResponseStatus;
+import ecommerce.auth_service.service.GuestUserService;
 import ecommerce.auth_service.util.Roles;
 import reactor.core.publisher.Mono;
 
@@ -23,10 +23,9 @@ public class GuestUserServiceImpl implements GuestUserService {
     @Autowired
     private SessionRepository sessionRepository;
 
-
     @Override
-    public Mono<GuestUserResponse> createGuestUser() {
-        GuestUserResponse userResponse = new GuestUserResponse();
+    public Mono<BaseResponse> createGuestUser() {
+        BaseResponse userResponse = new BaseResponse();
         return guestUserRepository.saveGuestUser(Roles.GUEST_USER.name())
                 .flatMap(guestUserDTO -> {
                     String accessToken = tokenProvider.createAccessToken(guestUserDTO.getUserId(),
@@ -35,7 +34,6 @@ public class GuestUserServiceImpl implements GuestUserService {
                             .flatMap(savedSession -> {
                                 userResponse.setAccessToken(accessToken);
                                 userResponse.setSessionId(savedSession.getSessionId());
-                                userResponse.setResponseStatus(CustomResponseStatus.USER_CREATED_SUCCESSFULLY);
                                 return Mono.just(userResponse);
                             });
                 })

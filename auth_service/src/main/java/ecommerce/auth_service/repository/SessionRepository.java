@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -23,7 +24,6 @@ public class SessionRepository {
     @Autowired
     BCryptPasswordEncoder passwordEncoder;
 
-    // TODO Consider making sessionID as key
     private String hashAccessToken(String accessToken) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -42,12 +42,13 @@ public class SessionRepository {
         Session session = new Session(accessToken, sessionId);
 
         String key = hashAccessToken(accessToken);
-        String hashedSessionId = passwordEncoder.encode(sessionId);
 
-        return redisTemplate.opsForHash()
-                .put(key, "sessionId", hashedSessionId)
-                .then(redisTemplate.expire(key, Duration.ofHours(24)))
-                .then(Mono.just(session))
+        return Mono.fromCallable(() -> passwordEncoder.encode(sessionId))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(hashedSessionId -> redisTemplate.opsForHash()
+                        .put(key, "sessionId", hashedSessionId)
+                        .then(redisTemplate.expire(key, Duration.ofHours(24)))
+                        .thenReturn(session))
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to save session", e)));
     }
 
@@ -86,7 +87,11 @@ public class SessionRepository {
 
         return redisTemplate.opsForHash()
                 .get(key, "sessionId")
-                .map(storedSessionId -> passwordEncoder.matches(sessionId, storedSessionId.toString()))
+                .map(storedSessionId -> {
+                    return Mono.fromCallable(() -> passwordEncoder.matches(sessionId, storedSessionId.toString()))
+                            .subscribeOn(Schedulers.boundedElastic());
+                })
+                .flatMap(resultMono -> resultMono)
                 .defaultIfEmpty(false)
                 .onErrorResume(e -> Mono.error(new RuntimeException("Failed to validate session", e)));
     }

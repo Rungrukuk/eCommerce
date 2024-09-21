@@ -1,7 +1,5 @@
 package ecommerce.auth_service.dto;
 
-import java.util.List;
-
 import ecommerce.auth_service.util.CustomResponseStatus;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -12,16 +10,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserResponse extends BaseResponse {
 
-    private String email;
-    private String refreshToken;
-    private List<String> errors;
+    private String email = "";
+    private String refreshToken = "";
+    private CustomResponseStatus responseStatus = CustomResponseStatus.UNEXPECTED_ERROR;
+    private int statusCode = 500;
+    private String message = "";
 
     public UserResponse(String email, String accessToken, String sessionId, String refreshToken,
             CustomResponseStatus responseStatus,
-            List<String> errors) {
-        super(accessToken, sessionId, responseStatus);
+            String message) {
+        super(accessToken, sessionId);
         this.email = email;
         this.refreshToken = refreshToken;
-        this.errors = errors;
+        this.message = message;
+        this.responseStatus = responseStatus;
     }
 }

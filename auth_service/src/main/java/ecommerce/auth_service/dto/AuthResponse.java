@@ -9,13 +9,26 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class AuthResponse extends BaseResponse {
-    private String serviceToken;
-    private String refreshToken;
+    private String serviceToken = "";
+    private String refreshToken = "";
+    private CustomResponseStatus responseStatus;
+    private int statusCode = 500;
 
-    public AuthResponse(String accessToken, String refreshToken, String sessionId,
-            CustomResponseStatus responseStatus, String serviceToken) {
-        super(accessToken, sessionId, responseStatus);
+    public AuthResponse(String accessToken, String refreshToken, String sessionId, String serviceToken,
+            CustomResponseStatus responseStatus) {
+        super(accessToken, sessionId);
         this.serviceToken = serviceToken;
         this.refreshToken = refreshToken;
+        this.responseStatus = responseStatus;
     }
+
+    public AuthResponse(String accessToken, String refreshToken, String sessionId, String serviceToken,
+            CustomResponseStatus responseStatus, int statusCode) {
+        super(accessToken, sessionId);
+        this.serviceToken = serviceToken;
+        this.refreshToken = refreshToken;
+        this.statusCode = statusCode;
+        this.responseStatus = responseStatus;
+    }
+
 }

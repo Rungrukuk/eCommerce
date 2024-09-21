@@ -1,6 +1,6 @@
-package ecommerce.auth_service.util;
+package ecommerce.api_gateway.util;
 
-public enum CustomResponseStatus {
+public enum AuthResponseStatuses {
     /**
      * When user is authenticated and has permissions for the given resources
      */
@@ -27,12 +27,4 @@ public enum CustomResponseStatus {
      * When unexpected error occurs
      */
     UNEXPECTED_ERROR,
-    /**
-     * When user created successfully
-     */
-    CREATED,
-    /**
-     * When request is bad
-     */
-    BAD_REQUEST
 }

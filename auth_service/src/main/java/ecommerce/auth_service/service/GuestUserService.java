@@ -1,8 +1,8 @@
 package ecommerce.auth_service.service;
 
-import ecommerce.auth_service.dto.GuestUserResponse;
+import ecommerce.auth_service.dto.BaseResponse;
 import reactor.core.publisher.Mono;
 
 public interface GuestUserService {
-    public Mono<GuestUserResponse> createGuestUser();
+    public Mono<BaseResponse> createGuestUser();
 }

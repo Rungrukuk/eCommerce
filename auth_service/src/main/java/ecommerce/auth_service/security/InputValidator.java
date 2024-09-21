@@ -37,15 +37,12 @@ public class InputValidator {
     public List<String> validateData(String email, String password, String rePassword) {
         List<String> errors = new ArrayList<>();
         if (!isValidEmail(email)) {
-            errors.add("Email is not valid!");
+            errors.add("Email is not valid");
         }
 
         if (!isStrongPassword(password)) {
-            errors.add("""
-                        Password is not strong enough.
-                        Ensure it has at least 1 uppercase letter, 1 lowercase letter,
-                        1 special character, and 1 numerical character.
-                    """);
+            errors.add(
+                    "Password is not strong enough. Ensure it has at least 1 uppercase letter, 1 lowercase letter, 1 special character, and 1 numerical character.");
         }
 
         if (!password.equals(rePassword)) {
