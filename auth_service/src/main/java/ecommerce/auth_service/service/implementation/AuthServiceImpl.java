@@ -121,7 +121,8 @@ public class AuthServiceImpl implements AuthService {
                 return Mono.just(response);
             }
             return Mono.just(unauthorizedAccessResponse(accessToken, sessionId, refreshToken,
-                    CustomResponseStatus.UNAUTHORIZED_GUEST_USER));
+                    roleName.equals(Roles.USER.name()) ? CustomResponseStatus.UNAUTHORIZED_USER
+                            : CustomResponseStatus.UNAUTHORIZED_GUEST_USER));
         });
     }
 

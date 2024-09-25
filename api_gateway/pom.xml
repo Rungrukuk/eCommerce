@@ -49,12 +49,48 @@
 			<artifactId>reactor-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
-			<version>4.28.0</version>
+			<version>4.28.2</version>
 		</dependency>
-	</dependencies>
+	
+		<dependency>
+			<groupId>jakarta.servlet</groupId>
+			<artifactId>jakarta.servlet-api</artifactId>
+			<version>6.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-core</artifactId>
+			<version>6.3.3</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-web</artifactId>
+			<version>6.3.3</version>
+		</dependency>
+
+ 
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-config</artifactId>
+			<version>6.3.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.34</version>
+			<scope>provided</scope>
+		</dependency>
+
+ </dependencies>
 
 	<build>
 		<plugins>
@@ -79,7 +115,7 @@
 				<artifactId>protobuf-maven-plugin</artifactId>
 				<version>0.6.1</version>
 				<configuration>
-					<protocArtifact>com.google.protobuf:protoc:4.28.0:exe:${os.detected.classifier}</protocArtifact>
+					<protocArtifact>com.google.protobuf:protoc:4.28.2:exe:${os.detected.classifier}</protocArtifact>
 				</configuration>
 				<executions>
 					<execution>

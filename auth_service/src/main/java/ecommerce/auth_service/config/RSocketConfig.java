@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.codec.protobuf.ProtobufDecoder;
 import org.springframework.http.codec.protobuf.ProtobufEncoder;
-import org.springframework.messaging.rsocket.DefaultMetadataExtractor;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
 
@@ -24,10 +23,5 @@ public class RSocketConfig {
         RSocketMessageHandler handler = new RSocketMessageHandler();
         handler.setRSocketStrategies(strategies);
         return handler;
-    }
-
-    @Bean
-    DefaultMetadataExtractor metadataExtractor() {
-        return new DefaultMetadataExtractor();
     }
 }
