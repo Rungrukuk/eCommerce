@@ -5,12 +5,13 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import ecommerce.auth_service.domain.RefreshToken;
+import org.springframework.transaction.reactive.TransactionalOperator;
+
 import ecommerce.auth_service.dto.AuthResponse;
-import ecommerce.auth_service.repository.RefreshTokenRepository;
 import ecommerce.auth_service.repository.SessionRepository;
 import ecommerce.auth_service.security.JwtTokenProvider;
 import ecommerce.auth_service.service.AuthService;
+import ecommerce.auth_service.service.RefreshTokenService;
 import ecommerce.auth_service.service.RoleService;
 import ecommerce.auth_service.util.CustomResponseStatus;
 import ecommerce.auth_service.util.Roles;
@@ -31,7 +32,7 @@ public class AuthServiceImpl implements AuthService {
     private GuestUserServiceImpl guestUserService;
 
     @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
+    private TransactionalOperator transactionalOperator;
 
     @Autowired
     private RoleService roleService;
@@ -39,10 +40,13 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
     @Override
     public Mono<AuthResponse> validate(Map<String, String> metadata) {
         if (metadata == null) {
-            return unauthenticatedAccessResponse(CustomResponseStatus.UNAUTHENTICATED_GUEST_USER);
+            return unauthenticatedAccessResponse();
         }
 
         return Mono.defer(() -> {
@@ -51,20 +55,24 @@ public class AuthServiceImpl implements AuthService {
             String sessionId = metadata.getOrDefault("sessionId", "");
             String audience = metadata.getOrDefault("audience", "");
             String destination = metadata.getOrDefault("destination", "");
+            String userAgent = metadata.getOrDefault("userAgent", "");
+            String clientCity = metadata.getOrDefault("clientCity", "");
 
             if ((accessToken.isBlank() || sessionId.isBlank()) && refreshToken.isBlank()) {
-                return unauthenticatedAccessResponse(CustomResponseStatus.UNAUTHENTICATED_GUEST_USER);
+                return unauthenticatedAccessResponse();
             }
 
             return validateAccessTokenAndSession(accessToken, sessionId)
                     .flatMap(isValid -> isValid
-                            ? handleValidAccessToken(accessToken, sessionId, refreshToken, audience, destination)
-                            : handleInvalidAccessToken(refreshToken, audience, destination));
-        }).onErrorResume(e -> {
-            e.printStackTrace();
-            System.err.println("Error in validate method: " + e.getMessage());
-            return createUnexpectedErrorResponse();
-        });
+                            ? handleValidAccessToken(accessToken, sessionId, audience, destination)
+                            : handleInvalidAccessToken(refreshToken, audience, destination, userAgent, clientCity));
+        })
+                .as(transactionalOperator::transactional)
+                .onErrorResume(e -> {
+                    e.printStackTrace();
+                    System.err.println("Error in validate method: " + e.getMessage());
+                    return createUnexpectedErrorResponse();
+                });
     }
 
     private Mono<Boolean> validateAccessTokenAndSession(String accessToken, String sessionId) {
@@ -105,7 +113,7 @@ public class AuthServiceImpl implements AuthService {
                 .then();
     }
 
-    private Mono<AuthResponse> handleValidAccessToken(String accessToken, String sessionId, String refreshToken,
+    private Mono<AuthResponse> handleValidAccessToken(String accessToken, String sessionId,
             String audience, String destination) {
         Claims claims = jwtTokenProvider.getAccessTokenClaims(accessToken);
         String roleName = claims.get("role", String.class);
@@ -114,67 +122,76 @@ public class AuthServiceImpl implements AuthService {
             if (hasAccess) {
                 String serviceToken = jwtTokenProvider.createServiceToken(claims.getSubject(), roleName, audience,
                         destination);
-                AuthResponse response = createAuthResponse(accessToken, sessionId, serviceToken, refreshToken,
+                AuthResponse response = createAuthResponse(null, null, serviceToken, null,
                         roleName.equals(Roles.USER.name()) ? CustomResponseStatus.AUTHORIZED_USER
                                 : CustomResponseStatus.AUTHORIZED_GUEST_USER,
                         200);
                 return Mono.just(response);
             }
-            return Mono.just(unauthorizedAccessResponse(accessToken, sessionId, refreshToken,
+            return Mono.just(unauthorizedAccessResponse(null, null, null,
                     roleName.equals(Roles.USER.name()) ? CustomResponseStatus.UNAUTHORIZED_USER
                             : CustomResponseStatus.UNAUTHORIZED_GUEST_USER));
         });
     }
 
-    private Mono<AuthResponse> handleInvalidAccessToken(String refreshToken, String audience, String destination) {
-        return Mono.justOrEmpty(refreshToken)
-                .filter(token -> !token.isBlank())
-                .flatMap(token -> {
-                    boolean isValid = jwtTokenProvider.validateRefreshToken(token);
+    private Mono<AuthResponse> handleInvalidAccessToken(String refreshToken, String audience, String destination,
+            String userAgent, String clienCity) {
+        return refreshTokenService.validateRefreshToken(refreshToken, userAgent, clienCity).flatMap(
+                isValid -> {
                     if (!isValid) {
                         return Mono.fromCallable(() -> passwordEncoder.encode(refreshToken))
                                 .subscribeOn(Schedulers.boundedElastic())
                                 .flatMap(encodedToken -> handleBackgroundErrors(List.of(
-                                        refreshTokenRepository.deleteByRefreshToken(encodedToken))))
-                                .then(unauthenticatedAccessResponse(CustomResponseStatus.UNAUTHENTICATED_GUEST_USER));
+                                        refreshTokenService.deleteByRefreshToken(encodedToken))))
+                                .then(unauthenticatedAccessResponse());
                     }
-                    Claims claims = jwtTokenProvider.getRefreshTokenClaims(token);
+                    Claims claims = jwtTokenProvider.getRefreshTokenClaims(refreshToken);
                     String roleName = claims.get("role", String.class);
 
                     return roleService.hasAccess(roleName, audience, destination)
                             .flatMap(hasAccess -> {
                                 String userId = claims.getSubject();
-                                String newRefreshToken = jwtTokenProvider.createRefreshToken(userId, roleName);
-                                String newAccessToken = jwtTokenProvider.createAccessToken(userId, roleName);
+                                String newRefreshToken = jwtTokenProvider.createRefreshToken(userId,
+                                        roleName);
+                                String newAccessToken = jwtTokenProvider.createAccessToken(userId,
+                                        roleName);
 
-                                return refreshTokenRepository.save(new RefreshToken(userId, newRefreshToken))
+                                return refreshTokenService
+                                        .updateRefreshToken(userId, newRefreshToken, userAgent, clienCity)
                                         .flatMap(
-                                                savedRefreshTokenEntity -> sessionRepository.saveSession(newAccessToken)
+                                                savedRefreshTokenEntity -> sessionRepository
+                                                        .saveSession(newAccessToken)
                                                         .map(savedSession -> {
                                                             if (hasAccess) {
                                                                 String serviceToken = jwtTokenProvider
                                                                         .createServiceToken(userId,
-                                                                                roleName, audience, destination);
+                                                                                roleName, audience,
+                                                                                destination);
                                                                 return createAuthResponse(newAccessToken,
                                                                         savedSession.getSessionId(),
                                                                         serviceToken, newRefreshToken,
-                                                                        CustomResponseStatus.AUTHORIZED_USER, 200);
+                                                                        CustomResponseStatus.AUTHORIZED_USER,
+                                                                        200);
                                                             }
-                                                            return unauthorizedAccessResponse(newAccessToken,
-                                                                    savedSession.getSessionId(), newRefreshToken,
+                                                            return unauthorizedAccessResponse(
+                                                                    newAccessToken,
+                                                                    savedSession.getSessionId(),
+                                                                    newRefreshToken,
                                                                     CustomResponseStatus.UNAUTHORIZED_USER);
-                                                        }));
+                                                        }))
+                                        .doOnError(e -> {
+                                            sessionRepository.deleteByAccessToken(newAccessToken).subscribe();
+                                        });
                             });
-                })
-                .switchIfEmpty(unauthenticatedAccessResponse(CustomResponseStatus.UNAUTHENTICATED_GUEST_USER));
+                });
     }
 
-    private Mono<AuthResponse> unauthenticatedAccessResponse(CustomResponseStatus responseStatus) {
+    private Mono<AuthResponse> unauthenticatedAccessResponse() {
         return guestUserService.createGuestUser().map(guestUserResponse -> {
             AuthResponse response = new AuthResponse();
             response.setAccessToken(guestUserResponse.getAccessToken());
             response.setSessionId(guestUserResponse.getSessionId());
-            response.setResponseStatus(responseStatus);
+            response.setResponseStatus(CustomResponseStatus.UNAUTHENTICATED_GUEST_USER);
             response.setStatusCode(401);
             return response;
         });
@@ -182,7 +199,7 @@ public class AuthServiceImpl implements AuthService {
 
     private AuthResponse unauthorizedAccessResponse(String accessToken, String sessionId, String refreshToken,
             CustomResponseStatus responseStatus) {
-        return createAuthResponse(accessToken, sessionId, "", refreshToken, responseStatus, 403);
+        return createAuthResponse(accessToken, sessionId, null, refreshToken, responseStatus, 403);
     }
 
     private AuthResponse createAuthResponse(String accessToken, String sessionId, String serviceToken,

@@ -34,5 +34,9 @@ public enum CustomResponseStatus {
     /**
      * When request is bad
      */
-    BAD_REQUEST
+    BAD_REQUEST,
+    /**
+     * When request isis ok
+     */
+    OK
 }

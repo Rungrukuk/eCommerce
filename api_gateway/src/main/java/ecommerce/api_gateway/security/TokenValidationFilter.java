@@ -21,14 +21,12 @@ import ecommerce.api_gateway.service.RSocketService;
 import ecommerce.api_gateway.util.AudienceDestination;
 import ecommerce.api_gateway.util.AudienceDestinationMapper;
 import ecommerce.api_gateway.util.AuthResponseStatuses;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 @Component
-@Slf4j
 public class TokenValidationFilter implements WebFilter {
 
         @Autowired
@@ -57,17 +55,22 @@ public class TokenValidationFilter implements WebFilter {
                                 .map(HttpCookie::getValue)
                                 .orElse("");
 
-                return validateToken(accessToken, sessionId, refreshToken, audience, destination)
-                                .flatMap(authResponse -> handleAuthResponse(exchange, chain, authResponse))
+                String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
+                String clientCity = exchange.getRequest().getHeaders().getFirst("Client-City");
+
+                return validateToken(accessToken, sessionId, refreshToken, audience, destination, userAgent, clientCity)
+                                .flatMap(authResponse -> handleAuthResponse(exchange, chain, authResponse, userAgent,
+                                                clientCity))
                                 .onErrorResume(e -> {
-                                        log.error("Error during token validation: {}", e.getMessage(), e);
+                                        e.printStackTrace();
+                                        System.out.println(e.getMessage());
                                         return handleErrorResponse(exchange, HttpStatus.INTERNAL_SERVER_ERROR,
                                                         "Unexpected error");
                                 });
         }
 
         private Mono<Void> handleAuthResponse(ServerWebExchange exchange, WebFilterChain chain,
-                        ProtoAuthResponse authResponse) {
+                        ProtoAuthResponse authResponse, String userAgent, String clientCity) {
                 String status = authResponse.getStatus();
                 AuthResponseStatuses authStatus = AuthResponseStatuses.valueOf(status);
                 DataBufferFactory dataBufferFactory = exchange.getResponse().bufferFactory();
@@ -110,7 +113,7 @@ public class TokenValidationFilter implements WebFilter {
                 DataBuffer dataBuffer = exchange.getResponse().bufferFactory()
                                 .wrap(String.format("{\"error\":\"%s\"}", message).getBytes(StandardCharsets.UTF_8));
                 return exchange.getResponse().writeWith(Mono.just(dataBuffer))
-                                .doFinally(signalType -> log.debug("Error response sent with status {}", status));
+                                .doFinally(signalType -> System.out.println(status));
         }
 
         private String getJsonResponse(String status) {
@@ -155,20 +158,24 @@ public class TokenValidationFilter implements WebFilter {
         }
 
         private Mono<ProtoAuthResponse> validateToken(String accessToken, String sessionId, String refreshToken,
-                        String audience,
-                        String destination) {
+                        String audience, String destination, String userAgent, String clientCity) {
                 ProtoAuthRequest protoAuthRequest = ProtoAuthRequest.newBuilder()
                                 .putMetadata("accessToken", accessToken)
                                 .putMetadata("sessionId", sessionId)
                                 .putMetadata("refreshToken", refreshToken)
                                 .putMetadata("audience", audience)
                                 .putMetadata("destination", destination)
+                                .putMetadata("userAgent", userAgent)
+                                .putMetadata("clientCity", clientCity)
                                 .build();
 
                 return rSocketService.getRSocketRequester()
                                 .route("auth.validateToken")
                                 .data(protoAuthRequest)
                                 .retrieveMono(ProtoAuthResponse.class)
-                                .doOnError(e -> log.error("RSocket request error: {}", e.getMessage(), e));
+                                .doOnError(e -> {
+                                        e.printStackTrace();
+                                        System.out.println(e.getMessage());
+                                });
         }
 }

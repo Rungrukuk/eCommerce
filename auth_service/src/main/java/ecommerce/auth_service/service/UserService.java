@@ -6,7 +6,9 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 public interface UserService {
-    Mono<UserResponse> createUser(Map<String, String> user);
+    Mono<UserResponse> createUser(Map<String, String> data, Map<String, String> metadata);
+
+    Mono<UserResponse> authenticateUser(Map<String, String> data, Map<String, String> metadata);
 
     Mono<UserDTO> getUser(String userId);
 

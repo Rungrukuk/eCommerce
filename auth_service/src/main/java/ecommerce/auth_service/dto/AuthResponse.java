@@ -15,14 +15,6 @@ public class AuthResponse extends BaseResponse {
     private int statusCode = 500;
 
     public AuthResponse(String accessToken, String refreshToken, String sessionId, String serviceToken,
-            CustomResponseStatus responseStatus) {
-        super(accessToken, sessionId);
-        this.serviceToken = serviceToken;
-        this.refreshToken = refreshToken;
-        this.responseStatus = responseStatus;
-    }
-
-    public AuthResponse(String accessToken, String refreshToken, String sessionId, String serviceToken,
             CustomResponseStatus responseStatus, int statusCode) {
         super(accessToken, sessionId);
         this.serviceToken = serviceToken;

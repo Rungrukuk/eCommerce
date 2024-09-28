@@ -13,10 +13,7 @@ public interface RefreshTokenRepository extends ReactiveCrudRepository<RefreshTo
 
     Mono<RefreshToken> findByRefreshToken(String refreshToken);
 
-    default Mono<Boolean> deleteByRefreshToken(String refreshToken) {
-        return findByRefreshToken(refreshToken)
-                .flatMap(token -> deleteById(token.getUserId())
-                        .then(Mono.just(true)))
-                .switchIfEmpty(Mono.just(false));
-    }
+    Mono<RefreshToken> findByUserIdAndUserAgentAndClientCity(String userId, String userAgent, String clientCity);
+
+    Mono<Void> deleteByRefreshToken(String refreshToken);
 }

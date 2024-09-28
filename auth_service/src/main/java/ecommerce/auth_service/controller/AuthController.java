@@ -28,7 +28,7 @@ public class AuthController {
     @MessageMapping("registerUser")
     public Mono<ProtoResponse> registerUser(ProtoRequest request) {
         if (tokenProvider.validateServiceToken(request.getMetadataOrDefault("serviceToken", ""))) {
-            return userService.createUser(request.getDataMap())
+            return userService.createUser(request.getDataMap(), request.getMetadataMap())
                     .flatMap(userResponse -> {
                         return Mono.just(ProtoResponse.newBuilder()
                                 .setStatusCode(userResponse.getStatusCode())
@@ -61,5 +61,28 @@ public class AuthController {
                     .build();
             return protoAuthResponse;
         });
+    }
+
+    @MessageMapping("loginUser")
+    public Mono<ProtoResponse> loginUser(ProtoRequest request) {
+        if (tokenProvider.validateServiceToken(request.getMetadataOrDefault("serviceToken", ""))) {
+            return userService.authenticateUser(request.getDataMap(), request.getMetadataMap())
+                    .flatMap(userResponse -> {
+                        return Mono.just(ProtoResponse.newBuilder()
+                                .setStatusCode(userResponse.getStatusCode())
+                                .setMessage(userResponse.getMessage())
+                                .setStatus(userResponse.getResponseStatus().name())
+                                .putMetadata("accessToken", userResponse.getAccessToken())
+                                .putMetadata("sessionId", userResponse.getSessionId())
+                                .putMetadata("refreshToken", userResponse.getRefreshToken())
+                                .putData("email", userResponse.getEmail())
+                                .build());
+                    });
+        }
+        return Mono.just(
+                ProtoResponse.newBuilder()
+                        .setStatusCode(403)
+                        .setMessage("Forbidden")
+                        .build());
     }
 }

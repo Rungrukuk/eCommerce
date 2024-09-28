@@ -50,4 +50,16 @@ public class InputValidator {
         }
         return errors;
     }
+
+    public List<String> validateData(String email, String password) {
+        List<String> errors = new ArrayList<>();
+        if (!isValidEmail(email)) {
+            errors.add("Email is not valid");
+        }
+
+        if (password.isBlank()) {
+            errors.add("Password should not be empty");
+        }
+        return errors;
+    }
 }

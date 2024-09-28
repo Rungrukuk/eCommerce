@@ -15,4 +15,6 @@ public class RefreshToken {
     @Id
     private String userId;
     private String refreshToken;
+    private String userAgent;
+    private String clientCity;
 }

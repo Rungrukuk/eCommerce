@@ -14,7 +14,6 @@ import ecommerce.api_gateway.ProtoRequest;
 import ecommerce.api_gateway.ProtoResponse;
 import ecommerce.api_gateway.security.CustomAuthentication;
 import ecommerce.api_gateway.service.RSocketService;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -23,7 +22,6 @@ import java.util.HashMap;
 
 @Controller
 @RequestMapping("/")
-@Slf4j
 public class ApiGatewayController {
 
         @Autowired
@@ -40,9 +38,13 @@ public class ApiGatewayController {
                                         CustomAuthentication authentication = (CustomAuthentication) securityContext
                                                         .getAuthentication();
                                         String serviceToken = authentication.getPrincipal().get("serviceToken");
+                                        String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
+                                        String clientCity = exchange.getRequest().getHeaders().getFirst("Client-City");
 
                                         ProtoRequest protoRequest = ProtoRequest.newBuilder()
                                                         .putMetadata("serviceToken", serviceToken)
+                                                        .putMetadata("userAgent", userAgent)
+                                                        .putMetadata("clientCity", clientCity)
                                                         .putData("email", body.getOrDefault("email", ""))
                                                         .putData("password", body.getOrDefault("password", ""))
                                                         .putData("rePassword", body.getOrDefault("rePassword", ""))
@@ -61,8 +63,52 @@ public class ApiGatewayController {
                                                                                 status));
                                                         })
                                                         .onErrorResume(e -> {
-                                                                log.error("Error during user registration: {}",
-                                                                                e.getMessage(), e);
+                                                                System.out.println(e.getMessage());
+                                                                e.printStackTrace();
+                                                                return Mono.just(new ResponseEntity<>(
+                                                                                Map.of("error", "Registration failed"),
+                                                                                HttpStatus.INTERNAL_SERVER_ERROR));
+                                                        });
+                                });
+        }
+
+        @PostMapping("login")
+        public Mono<ResponseEntity<Map<String, String>>> loginUser(
+                        @RequestHeader HttpHeaders headers,
+                        @RequestBody Map<String, String> body,
+                        ServerWebExchange exchange) {
+
+                return ReactiveSecurityContextHolder.getContext()
+                                .flatMap(securityContext -> {
+                                        CustomAuthentication authentication = (CustomAuthentication) securityContext
+                                                        .getAuthentication();
+                                        String serviceToken = authentication.getPrincipal().get("serviceToken");
+                                        String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
+                                        String clientCity = exchange.getRequest().getHeaders().getFirst("Client-City");
+
+                                        ProtoRequest protoRequest = ProtoRequest.newBuilder()
+                                                        .putMetadata("serviceToken", serviceToken)
+                                                        .putMetadata("userAgent", userAgent)
+                                                        .putMetadata("clientCity", clientCity)
+                                                        .putData("email", body.getOrDefault("email", ""))
+                                                        .putData("password", body.getOrDefault("password", ""))
+                                                        .build();
+
+                                        return rSocketService.getRSocketRequester().route("auth.loginUser")
+                                                        .data(protoRequest)
+                                                        .retrieveMono(ProtoResponse.class)
+                                                        .flatMap(protoResponse -> {
+                                                                Map<String, String> responseBody = createResponseBody(
+                                                                                authentication, protoResponse);
+                                                                setCookiesIfPresent(exchange, protoResponse);
+                                                                HttpStatus status = HttpStatus
+                                                                                .valueOf(protoResponse.getStatusCode());
+                                                                return Mono.just(new ResponseEntity<>(responseBody,
+                                                                                status));
+                                                        })
+                                                        .onErrorResume(e -> {
+                                                                System.out.println(e.getMessage());
+                                                                e.printStackTrace();
                                                                 return Mono.just(new ResponseEntity<>(
                                                                                 Map.of("error", "Registration failed"),
                                                                                 HttpStatus.INTERNAL_SERVER_ERROR));
