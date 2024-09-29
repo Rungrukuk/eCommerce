@@ -62,4 +62,9 @@ public class InputValidator {
         }
         return errors;
     }
+
+    public Object validateData(String[] inputs) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'validateData'");
+    }
 }

@@ -25,6 +25,7 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    // TODO add email verification
     @MessageMapping("registerUser")
     public Mono<ProtoResponse> registerUser(ProtoRequest request) {
         if (tokenProvider.validateServiceToken(request.getMetadataOrDefault("serviceToken", ""))) {
@@ -63,6 +64,7 @@ public class AuthController {
         });
     }
 
+    // TODO add email verification
     @MessageMapping("loginUser")
     public Mono<ProtoResponse> loginUser(ProtoRequest request) {
         if (tokenProvider.validateServiceToken(request.getMetadataOrDefault("serviceToken", ""))) {

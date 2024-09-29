@@ -135,8 +135,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Mono<AuthResponse> handleInvalidAccessToken(String refreshToken, String audience, String destination,
-            String userAgent, String clienCity) {
-        return refreshTokenService.validateRefreshToken(refreshToken, userAgent, clienCity).flatMap(
+            String userAgent, String clientCity) {
+        return refreshTokenService.validateRefreshToken(refreshToken, userAgent, clientCity).flatMap(
                 isValid -> {
                     if (!isValid) {
                         return Mono.fromCallable(() -> passwordEncoder.encode(refreshToken))
@@ -151,36 +151,39 @@ public class AuthServiceImpl implements AuthService {
                     return roleService.hasAccess(roleName, audience, destination)
                             .flatMap(hasAccess -> {
                                 String userId = claims.getSubject();
-                                String newRefreshToken = jwtTokenProvider.createRefreshToken(userId,
-                                        roleName);
-                                String newAccessToken = jwtTokenProvider.createAccessToken(userId,
-                                        roleName);
+                                String newRefreshToken = jwtTokenProvider.createRefreshToken(userId, roleName);
+                                return Mono
+                                        .fromCallable(() -> passwordEncoder
+                                                .encode(newRefreshToken))
+                                        .subscribeOn(Schedulers.boundedElastic())
+                                        .flatMap(encodedRefreshToken -> {
+                                            String newAccessToken = jwtTokenProvider.createAccessToken(userId,
+                                                    roleName);
 
-                                return refreshTokenService
-                                        .updateRefreshToken(userId, newRefreshToken, userAgent, clienCity)
-                                        .flatMap(
-                                                savedRefreshTokenEntity -> sessionRepository
-                                                        .saveSession(newAccessToken)
-                                                        .map(savedSession -> {
-                                                            if (hasAccess) {
-                                                                String serviceToken = jwtTokenProvider
-                                                                        .createServiceToken(userId,
-                                                                                roleName, audience,
-                                                                                destination);
-                                                                return createAuthResponse(newAccessToken,
+                                            return refreshTokenService
+                                                    .updateRefreshToken(userId, encodedRefreshToken, userAgent,
+                                                            clientCity)
+                                                    .flatMap(savedRefreshTokenEntity -> sessionRepository
+                                                            .saveSession(newAccessToken)
+                                                            .map(savedSession -> {
+                                                                if (hasAccess) {
+                                                                    String serviceToken = jwtTokenProvider
+                                                                            .createServiceToken(userId, roleName,
+                                                                                    audience, destination);
+                                                                    return createAuthResponse(newAccessToken,
+                                                                            savedSession.getSessionId(), serviceToken,
+                                                                            newRefreshToken,
+                                                                            CustomResponseStatus.AUTHORIZED_USER, 200);
+                                                                }
+                                                                return unauthorizedAccessResponse(newAccessToken,
                                                                         savedSession.getSessionId(),
-                                                                        serviceToken, newRefreshToken,
-                                                                        CustomResponseStatus.AUTHORIZED_USER,
-                                                                        200);
-                                                            }
-                                                            return unauthorizedAccessResponse(
-                                                                    newAccessToken,
-                                                                    savedSession.getSessionId(),
-                                                                    newRefreshToken,
-                                                                    CustomResponseStatus.UNAUTHORIZED_USER);
-                                                        }))
-                                        .doOnError(e -> {
-                                            sessionRepository.deleteByAccessToken(newAccessToken).subscribe();
+                                                                        newRefreshToken,
+                                                                        CustomResponseStatus.UNAUTHORIZED_USER);
+                                                            }))
+                                                    .doOnError(e -> {
+                                                        sessionRepository.deleteByAccessToken(newAccessToken)
+                                                                .subscribe();
+                                                    });
                                         });
                             });
                 });
