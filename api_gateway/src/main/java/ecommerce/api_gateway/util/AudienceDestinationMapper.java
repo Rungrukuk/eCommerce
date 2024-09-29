@@ -9,6 +9,7 @@ public class AudienceDestinationMapper {
     static {
         MAPPING.put("/register", new AudienceDestination("AUTH_SERVICE", "REGISTER"));
         MAPPING.put("/login", new AudienceDestination("AUTH_SERVICE", "LOGIN"));
+        MAPPING.put("/", new AudienceDestination("NONE", "NONE"));
     }
 
     public static AudienceDestination getMapping(String path) {

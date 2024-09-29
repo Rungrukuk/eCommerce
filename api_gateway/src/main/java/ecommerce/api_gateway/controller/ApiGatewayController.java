@@ -116,6 +116,18 @@ public class ApiGatewayController {
                                 });
         }
 
+        @GetMapping
+        public Mono<ResponseEntity<Map<String, String>>> getRoot() {
+                return ReactiveSecurityContextHolder.getContext().flatMap(
+                                securityContext -> {
+                                        CustomAuthentication authentication = (CustomAuthentication) securityContext
+                                                        .getAuthentication();
+                                        return Mono.just(new ResponseEntity<>(
+                                                        Map.of("userStatus", authentication.getUserStatus()),
+                                                        HttpStatus.OK));
+                                });
+        }
+
         private Map<String, String> createResponseBody(CustomAuthentication authentication,
                         ProtoResponse protoResponse) {
                 Map<String, String> responseBody = new HashMap<>();
