@@ -26,6 +26,7 @@ public class AuthController {
     private AuthService authService;
 
     // TODO add email verification
+    // TODO verify the token for services and destinations
     @MessageMapping("registerUser")
     public Mono<ProtoResponse> registerUser(ProtoRequest request) {
         if (tokenProvider.validateServiceToken(request.getMetadataOrDefault("serviceToken", ""))) {
@@ -51,7 +52,7 @@ public class AuthController {
 
     @MessageMapping("validateToken")
     public Mono<ProtoAuthResponse> validateAndIssueNewToken(ProtoAuthRequest request) {
-        return authService.validate(request.getMetadataMap()).map(authResponse -> {
+        return authService.validate(request).map(authResponse -> {
             ProtoAuthResponse protoAuthResponse = ProtoAuthResponse.newBuilder()
                     .setStatus(authResponse.getResponseStatus().name())
                     .setStatusCode(authResponse.getStatusCode())

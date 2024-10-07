@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: user_service
+
+  rsocket:
+    server:
+      port: 7001
+      ssl:
+        enabled: true
+        client-auth: need
+        key-store: ${USER_KEYSTORE_PATH}
+        key-store-type: PKCS12
+        key-store-password: ${USER_KEYSTORE_PASSWORD}
+        trust-store: ${TRUSTSTORE_PATH}
+        trust-store-type: PKCS12
+        trust-store-password: ${TRUSTSTORE_PASSWORD}
+
+  main:
+    web-application-type: none
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+
+  r2dbc:
+    user:
+      url: r2dbc:postgresql://localhost:5432/user
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
+    
+    location:
+      url: r2dbc:postgresql://localhost:5432/location
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
+
+jwt:
+  service:
+    public: ${JWT_SERVICE_PUBLIC_KEY}
+
+# logging:
+#   level:
+#     io.netty.handler.ssl: DEBUG
+#     root: DEBUG
+#     org.springframework: DEBUG
+#     io.rsocket: DEBUG

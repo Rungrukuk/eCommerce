@@ -11,7 +11,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 @Repository
-// TODO Instead of storing role, store user agent data
+// TODO Consider to not store Guest User in redis
 public class GuestUserRepository {
 
     @Autowired

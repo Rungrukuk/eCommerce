@@ -24,19 +24,16 @@ public enum CustomResponseStatus {
      */
     UNAUTHENTICATED_GUEST_USER,
     /**
-     * When unexpected error occurs
-     */
-    UNEXPECTED_ERROR,
-    /**
-     * When user created successfully
-     */
-    CREATED,
-    /**
      * When request is bad
      */
     BAD_REQUEST,
     /**
-     * When request isis ok
+     * When request is ok
      */
-    OK
+    OK,
+    /**
+     * When unexpected error occurs
+     */
+    UNEXPECTED_ERROR,
+
 }

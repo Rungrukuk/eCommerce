@@ -16,6 +16,7 @@ import java.util.Base64;
 import java.util.UUID;
 
 @Repository
+// TODO Consider enabling ssl in redis
 public class SessionRepository {
 
     @Autowired

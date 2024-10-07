@@ -18,13 +18,15 @@ import org.springframework.web.server.WebFilterChain;
 import ecommerce.api_gateway.ProtoAuthRequest;
 import ecommerce.api_gateway.ProtoAuthResponse;
 import ecommerce.api_gateway.service.RSocketService;
-import ecommerce.api_gateway.util.AudienceDestination;
-import ecommerce.api_gateway.util.AudienceDestinationMapper;
+import ecommerce.api_gateway.util.ServiceDestination;
+import ecommerce.api_gateway.util.ServiceDestinationMapper;
 import ecommerce.api_gateway.util.AuthResponseStatuses;
+import ecommerce.api_gateway.util.Services;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.List;
 
 @Component
 public class TokenValidationFilter implements WebFilter {
@@ -36,10 +38,10 @@ public class TokenValidationFilter implements WebFilter {
         // TODO Handle every error gracefully
         public @NonNull Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
                 String path = exchange.getRequest().getPath().toString();
-                AudienceDestination audienceDestination = AudienceDestinationMapper.getMapping(path);
+                ServiceDestination serviceDestination = ServiceDestinationMapper.getMapping(path);
 
-                String audience = audienceDestination.getAudience();
-                String destination = audienceDestination.getDestination();
+                List<String> services = serviceDestination.getServices();
+                List<String> destinations = serviceDestination.getDestinations();
 
                 MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
 
@@ -58,7 +60,8 @@ public class TokenValidationFilter implements WebFilter {
                 String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
                 String clientCity = exchange.getRequest().getHeaders().getFirst("Client-City");
 
-                return validateToken(accessToken, sessionId, refreshToken, audience, destination, userAgent, clientCity)
+                return validateToken(accessToken, sessionId, refreshToken, services, destinations, userAgent,
+                                clientCity)
                                 .flatMap(authResponse -> handleAuthResponse(exchange, chain, authResponse, userAgent,
                                                 clientCity))
                                 .onErrorResume(e -> {
@@ -158,18 +161,18 @@ public class TokenValidationFilter implements WebFilter {
         }
 
         private Mono<ProtoAuthResponse> validateToken(String accessToken, String sessionId, String refreshToken,
-                        String audience, String destination, String userAgent, String clientCity) {
+                        List<String> services, List<String> destinations, String userAgent, String clientCity) {
                 ProtoAuthRequest protoAuthRequest = ProtoAuthRequest.newBuilder()
-                                .putMetadata("accessToken", accessToken)
-                                .putMetadata("sessionId", sessionId)
-                                .putMetadata("refreshToken", refreshToken)
-                                .putMetadata("audience", audience)
-                                .putMetadata("destination", destination)
-                                .putMetadata("userAgent", userAgent)
-                                .putMetadata("clientCity", clientCity)
+                                .setAccessToken(accessToken)
+                                .setSessionId(sessionId)
+                                .setRefreshToken(refreshToken)
+                                .addAllServices(services)
+                                .addAllDestinations(destinations)
+                                .setUserAgent(userAgent)
+                                .setClientCity(clientCity)
                                 .build();
 
-                return rSocketService.getRSocketRequester()
+                return rSocketService.getRSocketRequester(Services.AUTH_SERVICE)
                                 .route("auth.validateToken")
                                 .data(protoAuthRequest)
                                 .retrieveMono(ProtoAuthResponse.class)

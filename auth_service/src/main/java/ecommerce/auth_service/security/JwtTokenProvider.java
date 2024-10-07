@@ -15,6 +15,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtTokenProvider {
@@ -84,11 +85,11 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String createServiceToken(String userId, String roleName, String audience, String destination) {
+    public String createServiceToken(String userId, String roleName, List<String> services, List<String> destinations) {
         Claims claims = Jwts.claims().setSubject(userId);
         claims.put("role", roleName);
-        claims.setAudience(audience);
-        claims.put("destination", destination);
+        claims.put("services", services);
+        claims.put("destinations", destinations);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + serviceTokenExpiration);

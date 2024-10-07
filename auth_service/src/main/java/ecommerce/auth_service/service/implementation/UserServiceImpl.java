@@ -93,7 +93,7 @@ public class UserServiceImpl implements UserService {
                                         if (passwordMatches) {
                                             return createUserResponse(existingUser.getUserId(),
                                                     existingUser.getEmail(), userAgent, clientCity,
-                                                    200, "Logged in successfully", CustomResponseStatus.OK, false);
+                                                    "Logged in successfully", false);
                                         } else {
                                             return createBadRequestResponse("Email or password is incorrect");
                                         }
@@ -134,7 +134,7 @@ public class UserServiceImpl implements UserService {
                     User newUser = new User(email, encodedPassword, Roles.USER.name());
                     return entityTemplate.insert(User.class).using(newUser)
                             .flatMap(savedUser -> createUserResponse(savedUser.getUserId(), email, userAgent,
-                                    clientCity, 201, "User created successfully", CustomResponseStatus.CREATED, true));
+                                    clientCity, "User created successfully", true));
                 });
     }
 
@@ -144,7 +144,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Mono<UserResponse> createUserResponse(String userId, String email, String userAgent, String clientCity,
-            int statusCode, String message, CustomResponseStatus responseStatus, boolean isNewUser) {
+            String message, boolean isNewUser) {
         String accessToken = tokenProvider.createAccessToken(userId, Roles.USER.name());
         String refreshToken = tokenProvider.createRefreshToken(userId, Roles.USER.name());
 
@@ -161,7 +161,7 @@ public class UserServiceImpl implements UserService {
                     return Mono.zip(savedRefreshTokenMono, savedSessionMono)
                             .map(tuple -> buildUserResponse(email, accessToken, refreshToken,
                                     tuple.getT2().getSessionId(),
-                                    statusCode, message, responseStatus))
+                                    200, message, CustomResponseStatus.OK))
                             .doOnError(e -> sessionRepository.deleteByAccessToken(accessToken).subscribe());
                 });
     }
@@ -192,6 +192,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Mono<UserResponse> handleError(Throwable e) {
+        // TODO Handle Error Gracefully
         System.out.println(e.getMessage());
         e.printStackTrace();
         return Mono.just(buildErrorResponse("Unexpected error", CustomResponseStatus.UNEXPECTED_ERROR, 500));

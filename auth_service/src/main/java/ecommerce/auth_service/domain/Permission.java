@@ -14,6 +14,6 @@ import lombok.NoArgsConstructor;
 public class Permission {
     @Id
     private Long id;
-    private String audience;
+    private String service;
     private String destination;
 }

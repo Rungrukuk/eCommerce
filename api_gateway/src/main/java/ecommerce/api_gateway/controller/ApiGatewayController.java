@@ -1,7 +1,6 @@
 package ecommerce.api_gateway.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +13,8 @@ import ecommerce.api_gateway.ProtoRequest;
 import ecommerce.api_gateway.ProtoResponse;
 import ecommerce.api_gateway.security.CustomAuthentication;
 import ecommerce.api_gateway.service.RSocketService;
+import ecommerce.api_gateway.util.AuthResponseStatuses;
+import ecommerce.api_gateway.util.Services;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -27,9 +28,20 @@ public class ApiGatewayController {
         @Autowired
         private RSocketService rSocketService;
 
+        @GetMapping
+        public Mono<ResponseEntity<Map<String, String>>> getRoot() {
+                return ReactiveSecurityContextHolder.getContext().flatMap(
+                                securityContext -> {
+                                        CustomAuthentication authentication = (CustomAuthentication) securityContext
+                                                        .getAuthentication();
+                                        return Mono.just(new ResponseEntity<>(
+                                                        Map.of("userStatus", authentication.getUserStatus()),
+                                                        HttpStatus.OK));
+                                });
+        }
+
         @PostMapping("register")
         public Mono<ResponseEntity<Map<String, String>>> registerUser(
-                        @RequestHeader HttpHeaders headers,
                         @RequestBody Map<String, String> body,
                         ServerWebExchange exchange) {
 
@@ -50,7 +62,8 @@ public class ApiGatewayController {
                                                         .putData("rePassword", body.getOrDefault("rePassword", ""))
                                                         .build();
 
-                                        return rSocketService.getRSocketRequester().route("auth.registerUser")
+                                        return rSocketService.getRSocketRequester(Services.AUTH_SERVICE)
+                                                        .route("auth.registerUser")
                                                         .data(protoRequest)
                                                         .retrieveMono(ProtoResponse.class)
                                                         .flatMap(protoResponse -> {
@@ -74,7 +87,6 @@ public class ApiGatewayController {
 
         @PostMapping("login")
         public Mono<ResponseEntity<Map<String, String>>> loginUser(
-                        @RequestHeader HttpHeaders headers,
                         @RequestBody Map<String, String> body,
                         ServerWebExchange exchange) {
 
@@ -94,7 +106,8 @@ public class ApiGatewayController {
                                                         .putData("password", body.getOrDefault("password", ""))
                                                         .build();
 
-                                        return rSocketService.getRSocketRequester().route("auth.loginUser")
+                                        return rSocketService.getRSocketRequester(Services.AUTH_SERVICE)
+                                                        .route("auth.loginUser")
                                                         .data(protoRequest)
                                                         .retrieveMono(ProtoResponse.class)
                                                         .flatMap(protoResponse -> {
@@ -116,22 +129,59 @@ public class ApiGatewayController {
                                 });
         }
 
-        @GetMapping
-        public Mono<ResponseEntity<Map<String, String>>> getRoot() {
-                return ReactiveSecurityContextHolder.getContext().flatMap(
-                                securityContext -> {
+        @PostMapping("/user-details")
+        public Mono<ResponseEntity<Map<String, String>>> createUserDetials(@RequestBody Map<String, String> body) {
+                return ReactiveSecurityContextHolder.getContext()
+                                .flatMap(securityContext -> {
                                         CustomAuthentication authentication = (CustomAuthentication) securityContext
                                                         .getAuthentication();
-                                        return Mono.just(new ResponseEntity<>(
-                                                        Map.of("userStatus", authentication.getUserStatus()),
-                                                        HttpStatus.OK));
+                                        String serviceToken = authentication.getPrincipal().get("serviceToken");
+
+                                        ProtoRequest protoRequest = ProtoRequest.newBuilder()
+                                                        .putMetadata("serviceToken", serviceToken)
+                                                        .putData("email", body.getOrDefault("email", ""))
+                                                        .putData("name", body.getOrDefault("name", ""))
+                                                        .putData("surname", body.getOrDefault("surname", ""))
+                                                        .putData("phoneNumber", body.getOrDefault("phoneNumber", ""))
+                                                        .putData("country", body.getOrDefault("country", ""))
+                                                        .putData("state", body.getOrDefault("state", ""))
+                                                        .putData("city", body.getOrDefault("city", ""))
+                                                        .putData("postalCode", body.getOrDefault("postalCode", ""))
+                                                        .putData("addressLine1", body.getOrDefault("addressLine1", ""))
+                                                        .putData("addressLine2", body.getOrDefault("addressLine2", ""))
+                                                        .build();
+
+                                        return rSocketService.getRSocketRequester(Services.USER_SERVICE)
+                                                        .route("user.createUserDetails")
+                                                        .data(protoRequest)
+                                                        .retrieveMono(ProtoResponse.class)
+                                                        .flatMap(protoResponse -> {
+                                                                Map<String, String> responseBody = createResponseBody(
+                                                                                authentication, protoResponse);
+                                                                HttpStatus status = HttpStatus
+                                                                                .valueOf(protoResponse.getStatusCode());
+                                                                return Mono.just(new ResponseEntity<>(responseBody,
+                                                                                status));
+                                                        })
+                                                        .onErrorResume(e -> {
+                                                                System.out.println(e.getMessage());
+                                                                e.printStackTrace();
+                                                                return Mono.just(new ResponseEntity<>(
+                                                                                Map.of("error", "Couyld not create user details"),
+                                                                                HttpStatus.INTERNAL_SERVER_ERROR));
+                                                        });
                                 });
         }
 
         private Map<String, String> createResponseBody(CustomAuthentication authentication,
                         ProtoResponse protoResponse) {
                 Map<String, String> responseBody = new HashMap<>();
-                responseBody.put("userStatus", authentication.getUserStatus());
+
+                if (HttpStatus.OK.value() == protoResponse.getStatusCode()) {
+                        responseBody.put("userStatus", AuthResponseStatuses.AUTHORIZED_USER.name());
+                } else {
+                        responseBody.put("userStatus", authentication.getUserStatus());
+                }
                 responseBody.put("status", protoResponse.getStatus());
                 responseBody.put("message", protoResponse.getMessage());
                 return responseBody;
