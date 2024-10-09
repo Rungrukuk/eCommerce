@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.regex.*;
 
 @Service
+// TODO need to implement max char size validation in both user and auth service
 public class InputValidatorServiceImpl implements InputValidatorService {
 
     private final PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();

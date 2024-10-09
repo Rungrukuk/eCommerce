@@ -22,7 +22,11 @@ spring:
     password: ${REDIS_PASSWORD}
     timeout: 60000
     client-name: eCommerceRedis
-    ssl: false # TODO enable this
+    ssl: true
+    ssl-truststore: ${TRUSTSTORE_PATH}
+    ssl-truststore-password: ${TRUSTSTORE_PASSWORD}
+    ssl-keystore: ${REDIS_KEYSTORE_PATH}
+    ssl-keystore-password: ${REDIS_KEYSTORE_PASSWORD}
 
   main:
     web-application-type: none

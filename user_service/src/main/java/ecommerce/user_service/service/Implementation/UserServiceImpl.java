@@ -79,7 +79,6 @@ public class UserServiceImpl implements UserService {
     private User createUserFromData(Map<String, String> data) {
         User newUser = new User();
         newUser.setId(data.get("userId"));
-        newUser.setEmail(data.get("email"));
         newUser.setName(data.get("name"));
         newUser.setSurname(data.get("surname"));
         newUser.setPhoneNumber(data.get("phoneNumber"));
