@@ -13,8 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Address {
     @Id
-    private String id;
-    private String userId;
+    private Long id;
     private String country;
     private String state;
     private String city;

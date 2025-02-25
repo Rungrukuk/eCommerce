@@ -10,8 +10,10 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 
 import ecommerce.user_service.domain.user.Address;
 import ecommerce.user_service.domain.user.User;
+import ecommerce.user_service.domain.user.UserAddress;
 import ecommerce.user_service.dto.UserResponse;
 import ecommerce.user_service.repository.user.AddressRepository;
+import ecommerce.user_service.repository.user.UserAddressRepository;
 import ecommerce.user_service.service.InputValidatorService;
 import ecommerce.user_service.service.UserService;
 import ecommerce.user_service.util.CustomResponseStatus;
@@ -31,47 +33,45 @@ public class UserServiceImpl implements UserService {
     private AddressRepository addressRepository;
 
     @Autowired
+    private UserAddressRepository userAddressRepository;
+
+    @Autowired
     @Qualifier("userR2dbcEntityTemplate")
     private R2dbcEntityTemplate r2dbcEntityTemplate;
 
     @Override
     public Mono<UserResponse> createUserDetails(Map<String, String> data) {
         return inputValidatorService.validateInput(data)
-                .flatMap(
-                        errors -> {
-                            if (errors.isEmpty()) {
-                                return r2dbcEntityTemplate.insert(User.class).using(createUserFromData(data))
-                                        .flatMap(
-                                                savedUser -> {
-                                                    return addressRepository.save(creatAddressFromData(data)).map(
-                                                            savedAddress -> {
-                                                                return buildSuccessResponse();
-                                                            });
-                                                })
-                                        .as(transactionalOperator::transactional)
-                                        .onErrorResume(this::handleError);
-                            }
-                            return createBadRequestResponse(errors.toString());
+                .flatMap(errors -> {
+                    if (errors.isEmpty()) {
+                        User user = createUserFromData(data);
+                        Address address = creatAddressFromData(data);
 
-                        })
+                        return r2dbcEntityTemplate.insert(User.class).using(user)
+                                .flatMap(savedUser -> addressRepository.save(address)
+                                        .flatMap(savedAddress -> createUserAddressEntry(savedUser.getId(),
+                                                savedAddress.getId()))
+                                        .thenReturn(buildSuccessResponse()))
+                                .as(transactionalOperator::transactional)
+                                .onErrorResume(this::handleError);
+                    }
+                    return createBadRequestResponse(errors.toString());
+                })
                 .onErrorResume(this::handleError);
     }
 
     @Override
     public Mono<UserResponse> getUserDetails(String userId) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getUser'");
     }
 
     @Override
     public Mono<UserResponse> deleteUserDetails(String userId) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'deleteUser'");
     }
 
     @Override
     public Mono<UserResponse> updateUserDetails(UserResponse user) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'updateUser'");
     }
 
@@ -86,7 +86,6 @@ public class UserServiceImpl implements UserService {
 
     private Address creatAddressFromData(Map<String, String> data) {
         Address newAddress = new Address();
-        newAddress.setUserId(data.get("userId"));
         newAddress.setCountry(data.get("country"));
         newAddress.setState(data.get("state"));
         newAddress.setCity(data.get("city"));
@@ -96,30 +95,29 @@ public class UserServiceImpl implements UserService {
         return newAddress;
     }
 
+    private Mono<UserAddress> createUserAddressEntry(String userId, Long addressId) {
+        UserAddress userAddress = new UserAddress();
+        userAddress.setUserId(userId);
+        userAddress.setAddressId(addressId);
+        userAddress.setDefault(true);
+        return userAddressRepository.save(userAddress);
+    }
+
     private Mono<UserResponse> handleError(Throwable e) {
-        // TODO Handle Error Gracefully
         System.out.println(e.getMessage());
         e.printStackTrace();
-        return Mono.just(buildErrorResponse("Unexpected error", CustomResponseStatus.UNEXPECTED_ERROR, 500));
+        return Mono.just(buildErrorResponse(CustomResponseStatus.UNEXPECTED_ERROR, "Unexpected error", 500));
     }
 
     private Mono<UserResponse> createBadRequestResponse(String message) {
-        return Mono.just(buildErrorResponse(message, CustomResponseStatus.BAD_REQUEST, 400));
+        return Mono.just(buildErrorResponse(CustomResponseStatus.BAD_REQUEST, message, 400));
     }
 
-    private UserResponse buildErrorResponse(String message, CustomResponseStatus status, int statusCode) {
-        UserResponse response = new UserResponse();
-        response.setMessage(message);
-        response.setResponseStatus(status);
-        response.setStatusCode(statusCode);
-        return response;
+    private UserResponse buildErrorResponse(CustomResponseStatus status, String message, int statusCode) {
+        return new UserResponse(status, message, statusCode);
     }
 
     private UserResponse buildSuccessResponse() {
-        UserResponse response = new UserResponse();
-        response.setMessage("User details created successfully");
-        response.setResponseStatus(CustomResponseStatus.OK);
-        response.setStatusCode(200);
-        return response;
+        return new UserResponse(CustomResponseStatus.OK, "User details created successfully", 200);
     }
 }

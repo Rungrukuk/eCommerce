@@ -8,13 +8,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Table("users")
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+@Table("user_addresses")
+public class UserAddress {
     @Id
     private String id;
-    private String name;
-    private String surname;
-    private String phoneNumber;
+    private String userId;
+    private Long addressId;
+    private boolean isDefault;
 }
