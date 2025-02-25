@@ -75,7 +75,6 @@ public class UserServiceImpl implements UserService {
         throw new UnsupportedOperationException("Unimplemented method 'updateUser'");
     }
 
-    // TODO get user email from auth service not body
     private User createUserFromData(Map<String, String> data) {
         User newUser = new User();
         newUser.setId(data.get("userId"));
