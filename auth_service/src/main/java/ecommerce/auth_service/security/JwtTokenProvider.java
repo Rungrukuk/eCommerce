@@ -149,6 +149,7 @@ public class JwtTokenProvider {
     }
 
     private Claims getClaims(String token, PublicKey publicKey) {
+        // TODO handle error gracefully
         JwtParser jwtParser = Jwts.parserBuilder()
                 .setSigningKey(publicKey)
                 .build();

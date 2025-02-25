@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class State {
-
     @Id
     private Integer id;
     private Integer countryId;
