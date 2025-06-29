@@ -146,7 +146,8 @@ public class AuthServiceImpl implements AuthService {
                         List<String> services, List<String> destinations) {
                 Claims claims = jwtTokenProvider.getAccessTokenClaims(accessToken);
                 String roleName = claims.get("role", String.class);
-
+                // TODO: need to check if Client City and user agent are matched in sensitive
+                // operations for user
                 return roleService.hasAccess(roleName, services, destinations).flatMap(hasAccess -> {
                         if (hasAccess) {
                                 // Generate service-specific token for downstream services
@@ -167,7 +168,7 @@ public class AuthServiceImpl implements AuthService {
                                                 200));
                         }
                         return Mono.just(unauthorizedAccessResponse(
-                                        null, null, null,
+                                        accessToken, sessionId, null,
                                         roleName.equals(Roles.USER.name())
                                                         ? CustomResponseStatus.UNAUTHORIZED_USER
                                                         : CustomResponseStatus.UNAUTHORIZED_GUEST_USER));
@@ -250,6 +251,8 @@ public class AuthServiceImpl implements AuthService {
                                                                                                                                                 newRefreshToken,
                                                                                                                                                 CustomResponseStatus.UNAUTHORIZED_USER);
                                                                                                                         }))
+                                                                                                        .publishOn(Schedulers
+                                                                                                                        .boundedElastic())
                                                                                                         .doOnError(e -> {
                                                                                                                 // Cleanup
                                                                                                                 // failed

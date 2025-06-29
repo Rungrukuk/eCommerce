@@ -187,6 +187,7 @@ public class ApiGatewayController {
                 return responseBody;
         }
 
+        // TODO: fix this random numbers 86400
         private void setCookiesIfPresent(ServerWebExchange exchange, ProtoResponse protoResponse) {
                 Optional.ofNullable(protoResponse.getMetadataOrDefault("accessToken", ""))
                                 .filter(token -> !token.isEmpty())
