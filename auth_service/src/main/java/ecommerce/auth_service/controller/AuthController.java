@@ -26,7 +26,6 @@ public class AuthController {
     private AuthService authService;
 
     // TODO add email verification
-    // TODO verify the token for services and destinations
     @MessageMapping("registerUser")
     public Mono<ProtoResponse> registerUser(ProtoRequest request) {
         if (tokenProvider.validateServiceToken(request.getMetadataOrDefault("serviceToken", ""))) {

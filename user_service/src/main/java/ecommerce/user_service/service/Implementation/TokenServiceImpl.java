@@ -31,27 +31,27 @@ public class TokenServiceImpl implements TokenService {
         return kf.generatePublic(spec);
     }
 
-    public String validateTokenAndGetUserId(String token, Destination destination) {
-        if (token == null || token.isEmpty()) {
-            return null;
-        }
-        try {
-            JwtParser jwtParser = Jwts.parserBuilder()
-                    .setSigningKey(serviceTokenPublicKey)
-                    .setAllowedClockSkewSeconds(60)
-                    .build();
-            Claims claims = jwtParser.parseClaimsJws(token).getBody();
-            if (claims.get("services", List.class).contains("USER_SERVICE")
-                    && claims.get("destinations", List.class).contains(destination.name())) {
-                return claims.getSubject();
-            }
-            return null;
-        } catch (Exception e) {
-            // TODO handle error gracefully
-            System.err.println("Token validation failed: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        }
+public String validateTokenAndGetUserId(String token, Destination destination) {
+    if (token == null || token.isEmpty()) {
+        return null;
     }
+    try {
+        JwtParser jwtParser = Jwts.parserBuilder()
+                .setSigningKey(serviceTokenPublicKey)
+                .setAllowedClockSkewSeconds(60)
+                .build();
+        Claims claims = jwtParser.parseClaimsJws(token).getBody();
+        if (claims.get("services", List.class).contains("USER_SERVICE")
+                && claims.get("destinations", List.class).contains(destination.name())) {
+            return claims.getSubject();
+        }
+        return null;
+    } catch (Exception e) {
+        // TODO handle error gracefully
+        System.err.println("Token validation failed: " + e.getMessage());
+        e.printStackTrace();
+        return null;
+    }
+}
 
 }

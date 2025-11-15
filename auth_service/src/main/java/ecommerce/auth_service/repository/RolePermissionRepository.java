@@ -12,5 +12,4 @@ public interface RolePermissionRepository extends ReactiveCrudRepository<RolePer
             "JOIN role_permissions rp ON rp.permission_id = p.id " +
             "WHERE rp.role_name = :roleName")
     Flux<Permission> findPermissionsByRoleName(String roleName);
-
 }

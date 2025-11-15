@@ -21,6 +21,9 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -147,9 +150,12 @@ public class UserServiceImpl implements UserService {
             String message, boolean isNewUser) {
         String accessToken = tokenProvider.createAccessToken(userId, Roles.USER.name());
         String refreshToken = tokenProvider.createRefreshToken(userId, Roles.USER.name());
-
-        return Mono.fromCallable(() -> passwordEncoder.encode(refreshToken))
-                .subscribeOn(Schedulers.boundedElastic())
+        return Mono.fromCallable(() -> {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(refreshToken.getBytes(StandardCharsets.UTF_8));
+            String preHashed = Base64.getEncoder().encodeToString(hash);
+            return passwordEncoder.encode(preHashed);
+        }).subscribeOn(Schedulers.boundedElastic())
                 .flatMap(encodedRefreshToken -> {
                     Mono<RefreshToken> savedRefreshTokenMono = isNewUser
                             ? refreshTokenService.createRefreshToken(userId, encodedRefreshToken, userAgent, clientCity)

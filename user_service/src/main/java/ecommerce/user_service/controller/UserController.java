@@ -24,30 +24,30 @@ public class UserController {
         @Autowired
         private UserService userService;
 
-        @MessageMapping("createUserDetails")
-        public Mono<ProtoResponse> createUser(ProtoRequest request) {
+@MessageMapping("createUserDetails")
+public Mono<ProtoResponse> createUser(ProtoRequest request) {
 
-                String userId = tokenService.validateTokenAndGetUserId(
-                                request.getMetadataOrDefault("serviceToken", ""),
-                                Destination.CREATE_USER_DETAILS);
+        String userId = tokenService.validateTokenAndGetUserId(
+                        request.getMetadataOrDefault("serviceToken", ""),
+                        Destination.CREATE_USER_DETAILS);
 
-                if (userId != null) {
-                        Map<String, String> data = new HashMap<>(request.getDataMap());
-                        data.put("userId", userId);
-                        return userService.createUserDetails(data)
-                                        .flatMap(userResponse -> {
-                                                return Mono.just(ProtoResponse.newBuilder()
-                                                                .setStatusCode(userResponse.getStatusCode())
-                                                                .setMessage(userResponse.getMessage())
-                                                                .setStatus(userResponse.getResponseStatus().name())
-                                                                .build());
-                                        });
-                }
-
-                return Mono.just(
-                                ProtoResponse.newBuilder()
-                                                .setStatusCode(403)
-                                                .setMessage("Forbidden")// fix this
-                                                .build());
+        if (userId != null) {
+                Map<String, String> data = new HashMap<>(request.getDataMap());
+                data.put("userId", userId);
+                return userService.createUserDetails(data)
+                                .flatMap(userResponse -> {
+                                        return Mono.just(ProtoResponse.newBuilder()
+                                                        .setStatusCode(userResponse.getStatusCode())
+                                                        .setMessage(userResponse.getMessage())
+                                                        .setStatus(userResponse.getResponseStatus().name())
+                                                        .build());
+                                });
         }
+
+        return Mono.just(
+                        ProtoResponse.newBuilder()
+                                        .setStatusCode(403)
+                                        .setMessage("Forbidden")// fix this
+                                        .build());
+}
 }
