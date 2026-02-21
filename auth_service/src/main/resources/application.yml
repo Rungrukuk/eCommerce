@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: auth_service
+
+  rsocket:
+    server:
+      port: 7000
+      ssl:
+        enabled: true
+        client-auth: need
+        key-store: ${AUTH_KEYSTORE_PATH}
+        key-store-type: PKCS12
+        key-store-password: ${AUTH_KEYSTORE_PASSWORD}
+        trust-store: ${TRUSTSTORE_PATH}
+        trust-store-type: PKCS12
+        trust-store-password: ${TRUSTSTORE_PASSWORD}
+    client:
+      ssl:
+        auth-key: ${AUTH_KEY_PATH}
+        auth-cert: ${AUTH_CERT_PATH}
+        trust-cert: ${TRUST_CERT_PATH}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+      timeout: 60000
+      client-name: eCommerceRedis
+      ssl:
+        enabled: true
+        bundle: redisBundle
+
+  ssl:
+    bundle:
+      jks:
+        redisBundle:
+          truststore:
+            location: ${TRUSTSTORE_PATH}
+            password: ${TRUSTSTORE_PASSWORD}
+            type: PKCS12
+          keystore:
+            location: ${REDIS_KEYSTORE_PATH}
+            password: ${REDIS_KEYSTORE_PASSWORD}
+            type: PKCS12
+
+  main:
+    web-application-type: none
+
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:5432/auth
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/auth
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+services:
+  monitoring:
+    host: ${MONITORING_SERVICE_HOST:localhost}
+    port: ${MONITORING_SERVICE_PORT:7002}
+
+jwt:
+  access:
+    private: ${JWT_ACCESS_PRIVATE_KEY}
+    public: ${JWT_ACCESS_PUBLIC_KEY}
+    expiration: 86400000
+  refresh:
+    private: ${JWT_REFRESH_PRIVATE_KEY}
+    public: ${JWT_REFRESH_PUBLIC_KEY}
+    expiration: 604800000
+  service:
+    private: ${JWT_SERVICE_PRIVATE_KEY}
+    public: ${JWT_SERVICE_PUBLIC_KEY}
+    expiration: 300000
+
+logging:
+  level:
+    ecommerce.monitoring_service: INFO

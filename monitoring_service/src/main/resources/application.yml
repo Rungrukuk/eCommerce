@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: monitoring_service
+
+  rsocket:
+    server:
+      port: 7002
+      ssl:
+        enabled: true
+        client-auth: need
+        key-store: ${MONITORING_KEYSTORE_PATH}
+        key-store-type: PKCS12
+        key-store-password: ${MONITORING_KEYSTORE_PASSWORD}
+        trust-store: ${TRUSTSTORE_PATH}
+        trust-store-type: PKCS12
+        trust-store-password: ${TRUSTSTORE_PASSWORD}
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:5432/log
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  main:
+    web-application-type: none
+
+logging:
+  level:
+    ecommerce.monitoring_service: INFO

@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: user_service
+
+  rsocket:
+    server:
+      port: 7001
+      ssl:
+        enabled: true
+        client-auth: need
+        key-store: ${USER_KEYSTORE_PATH}
+        key-store-type: PKCS12
+        key-store-password: ${USER_KEYSTORE_PASSWORD}
+        trust-store: ${TRUSTSTORE_PATH}
+        trust-store-type: PKCS12
+        trust-store-password: ${TRUSTSTORE_PASSWORD}
+    client:
+      ssl:
+        user-key: ${USER_KEY_PATH}
+        user-cert: ${USER_CERT_PATH}
+        trust-cert: ${TRUST_CERT_PATH}
+
+  main:
+    web-application-type: none
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+
+  r2dbc:
+    user:
+      url: r2dbc:postgresql://${DB_HOST:localhost}:5432/user
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
+    
+    location:
+      url: r2dbc:postgresql://${DB_HOST:localhost}:5432/location
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
+
+services:
+  monitoring:
+    host: ${MONITORING_SERVICE_HOST:localhost}
+    port: ${MONITORING_SERVICE_PORT:7002}
+
+jwt:
+  service:
+    public: ${JWT_SERVICE_PUBLIC_KEY}
+
+logging:
+  level:
+    ecommerce.monitoring_service: INFO

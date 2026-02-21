@@ -1,0 +1,29 @@
+spring:
+  rsocket:
+    client:
+      ssl:
+        enabled: true
+        api-key: ${API_KEY_PATH}
+        api-cert: ${API_CERT_PATH}
+        trust-cert: ${TRUST_CERT_PATH}
+server:
+  port: 8443
+  ssl:
+    key-store: ${API_KEYSTORE_PATH}
+    key-store-password: ${API_KEYSTORE_PASSWORD}
+    key-store-type: PKCS12
+    key-alias: ${API_KEYSTORE_ALIAS}
+    enabled: true
+
+services:
+  endpoints:
+    # Use Enum names in util/Services.java
+    AUTH_SERVICE:
+      host: ${AUTH_SERVICE_HOST:localhost}
+      port: ${AUTH_SERVICE_PORT:7000}
+    USER_SERVICE:
+      host: ${USER_SERVICE_HOST:localhost}
+      port: ${USER_SERVICE_PORT:7001}
+logging:
+  level:
+    ecommerce.monitoring_service: INFO
